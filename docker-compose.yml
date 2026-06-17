@@ -1,0 +1,8 @@
+services:
+  draw-wood:
+    build: .
+    image: draw-wood:latest
+    container_name: draw-wood
+    ports:
+      - "8080:80"
+    restart: unless-stopped

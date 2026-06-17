@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mapa de Peças de Madeira</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🪵</span>
+      <span>Mapa de Peças <small>de Madeira</small></span>
+    </div>
+
+    <div class="toolbar">
+      <label class="btn" title="Carregar imagem de fundo">
+        📷 Imagem
+        <input type="file" id="imageInput" accept="image/*" hidden />
+      </label>
+
+      <div class="tools" role="group" aria-label="Ferramentas">
+        <button class="tool active" data-tool="select" title="Selecionar / Mover (V)">↖ Selecionar</button>
+        <button class="tool" data-tool="rect" title="Desenhar peça (R)">▭ Peça</button>
+        <button class="tool" data-tool="calibrate" title="Calibrar escala (C)">📏 Calibrar</button>
+        <button class="tool" data-tool="crop" title="Recortar imagem (X)">✂ Recortar</button>
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn" id="btnSchematic" title="Gerar esquemático">📐 Esquemático</button>
+      <button class="btn" id="btnSaveJson" title="Salvar projeto (.json)">💾 Salvar</button>
+      <label class="btn" title="Abrir projeto (.json)">
+        📂 Abrir
+        <input type="file" id="loadInput" accept="application/json,.json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <canvas id="editor"></canvas>
+      <div id="cropBar" class="crop-bar" hidden>
+        <span id="cropDims" class="crop-dims"></span>
+        <button class="btn" id="btnCropApply">✓ Aplicar recorte</button>
+        <button class="btn" id="btnCropCancel">✕ Cancelar</button>
+      </div>
+      <div id="emptyHint" class="empty-hint">
+        <div>
+          <p><strong>1.</strong> Carregue uma imagem de fundo (📷 Imagem).</p>
+          <p><strong>2.</strong> Use 📏 <strong>Calibrar</strong> para arrastar sobre uma medida conhecida e informar o tamanho em cm.</p>
+          <p><strong>3.</strong> Use ▭ <strong>Peça</strong> para desenhar os retângulos das peças.</p>
+          <p><strong>4.</strong> Gere o 📐 <strong>Esquemático</strong> e 💾 <strong>Salve</strong> o projeto.</p>
+        </div>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="panel">
+        <h2>Escala</h2>
+        <div class="scale-row">
+          <span id="scaleInfo" class="muted">Não calibrada</span>
+        </div>
+        <div class="field-grid">
+          <label>Largura total (cm)
+            <input type="number" id="totalW" step="0.1" placeholder="auto" />
+          </label>
+          <label>Altura total (cm)
+            <input type="number" id="totalH" step="0.1" placeholder="auto" />
+          </label>
+        </div>
+        <p class="hint">Deixe em branco para calcular automaticamente a partir da calibração.</p>
+        <label class="manual-toggle" style="margin-top:10px;">
+          <input type="checkbox" id="snapHalf" /> Arredondar para 0,5 cm
+        </label>
+      </div>
+
+      <div class="panel grow">
+        <h2>Peças <span id="pieceCount" class="badge">0</span></h2>
+        <ul id="pieceList" class="piece-list"></ul>
+      </div>
+
+      <div class="panel" id="propsPanel" hidden>
+        <h2>Propriedades</h2>
+        <div class="field-grid">
+          <label class="col2">Rótulo
+            <input type="text" id="pLabel" />
+          </label>
+          <label class="col2">Nome da cor
+            <input type="text" id="pColorName" placeholder="ex.: Verde" />
+          </label>
+          <label>Cor
+            <input type="color" id="pColor" />
+          </label>
+          <label class="manual-toggle">Medida manual
+            <input type="checkbox" id="pManual" />
+          </label>
+          <label>Largura (cm)
+            <input type="number" id="pRealW" step="0.1" />
+          </label>
+          <label>Altura (cm)
+            <input type="number" id="pRealH" step="0.1" />
+          </label>
+          <label>X (px)<input type="number" id="pX" /></label>
+          <label>Y (px)<input type="number" id="pY" /></label>
+          <label>L (px)<input type="number" id="pW" /></label>
+          <label>A (px)<input type="number" id="pH" /></label>
+        </div>
+        <div class="layer-row">
+          <span>Camada:</span>
+          <button class="btn" id="btnLayerBack" title="Enviar para trás">⤓ Trás</button>
+          <button class="btn" id="btnLayerDown" title="Recuar uma camada">↓</button>
+          <button class="btn" id="btnLayerUp" title="Avançar uma camada">↑</button>
+          <button class="btn" id="btnLayerFront" title="Trazer para frente">⤒ Frente</button>
+        </div>
+        <button class="btn danger full" id="btnDelete">🗑 Excluir peça</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal do esquemático -->
+  <div id="schematicModal" class="modal" hidden>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>Esquemático</h2>
+        <div class="modal-actions">
+          <button class="btn" id="btnExportPng">⬇ Exportar PNG</button>
+          <button class="btn" id="btnCloseModal">✕ Fechar</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <canvas id="schematic"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
