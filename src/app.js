@@ -664,12 +664,72 @@ modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = tr
 document.getElementById('btnExportPng').addEventListener('click', () => {
   document.getElementById('schematic').toBlob(b => download(b, 'esquematico.png'), 'image/png');
 });
+document.getElementById('btnExportPdf').addEventListener('click', exportPdf);
+
+// ---------- Temas do esquemático ----------
+// 'screen' = visual escuro (tela); 'print' = otimizado p/ impressão (fundo branco,
+// imagem com 50% de transparência, textos e cotas escuros).
+const THEMES = {
+  screen: {
+    bg: '#111317', title: '#f3f4f6', subtitle: '#9ca3af', footer: '#6b7280',
+    grid: 'rgba(255,255,255,.06)', cardBox: '#1c1f26',
+    imageAlpha: 1, pieceFillAlpha: 0.12, pieceFillNoImg: '#1c1f26',
+    chipBg: 'rgba(0,0,0,.55)', chipText: '#f3f4f6',
+    dimLine: '#9ca3af', dimText: '#e5e7eb', tick: '#6b7280', arrow: '#9ca3af',
+  },
+  print: {
+    bg: '#ffffff', title: '#111317', subtitle: '#374151', footer: '#6b7280',
+    grid: 'rgba(0,0,0,.06)', cardBox: '#ffffff',
+    imageAlpha: 0.5, pieceFillAlpha: 0.10, pieceFillNoImg: '#f3f4f6',
+    chipBg: 'rgba(255,255,255,.72)', chipText: '#111317',
+    dimLine: '#4b5563', dimText: '#111317', tick: '#9ca3af', arrow: '#4b5563',
+    darkenPieces: true,   // escurece cores claras p/ contraste no fundo branco
+  },
+};
+let theme = THEMES.screen;
+
+// Adapta a cor da peça ao tema ativo: no modo impressão (fundo branco),
+// escurece cores muito claras mantendo o matiz, garantindo contraste.
+function pieceColor(hex) {
+  if (!theme.darkenPieces) return hex;
+  const h = hex.replace('#', '');
+  const n = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  let r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+  const bright = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const MAX = 0.5;   // brilho percebido máximo no papel
+  if (bright > MAX) {
+    const f = MAX / bright;
+    r = Math.round(r * f); g = Math.round(g * f); b = Math.round(b * f);
+  }
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+// Renderiza no tema 'print' (fundo branco, imagem 50%) e abre o diálogo de
+// impressão do navegador — o usuário escolhe "Salvar como PDF". Sem dependências.
+function exportPdf() {
+  if (!state.pieces.length) { alert('Desenhe ao menos uma peça primeiro.'); return; }
+  const cv = document.createElement('canvas');
+  drawSchematic('print', cv);
+  const url = cv.toDataURL('image/png');
+  const win = window.open('', '_blank');
+  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Esquemático — ${state.imageName || 'peças'}</title>
+    <style>
+      @page { size: A4 portrait; margin: 10mm; }
+      html, body { margin: 0; padding: 0; background: #fff; }
+      img { width: 100%; height: auto; display: block; }
+    </style></head>
+    <body><img src="${url}" onload="window.focus();window.print();"></body></html>`);
+  win.document.close();
+}
 
 drawSchematicSetup();
 function drawSchematicSetup() { /* placeholder for module clarity */ }
 
-function drawSchematic() {
-  const cv = document.getElementById('schematic');
+function drawSchematic(themeName = 'screen', targetCanvas) {
+  theme = THEMES[themeName] || THEMES.screen;
+  const cv = targetCanvas || document.getElementById('schematic');
   const g = cv.getContext('2d');
   // grade de cards à direita (define a altura necessária do canvas)
   const cols = 2, gapX = 40, gapY = 40, gridX = 1010, gridY = 100, cellW = 380, cellH = 270;
@@ -678,17 +738,17 @@ function drawSchematic() {
   const leftBottom = 150 + 940;
   const W = 1900, H = Math.max(leftBottom, rightBottom) + 70;
   cv.width = W; cv.height = H;
-  g.fillStyle = '#111317'; g.fillRect(0, 0, W, H);
+  g.fillStyle = theme.bg; g.fillRect(0, 0, W, H);
 
   const bb = boundingBox();
   const colorName = p => p.colorName ? ` (${p.colorName})` : '';
 
   // ----- Painel esquerdo: layout -----
   const Ltitle = 'ESQUEMA DE PEÇAS';
-  g.fillStyle = '#f3f4f6'; g.font = '700 26px system-ui'; g.textAlign = 'left';
+  g.fillStyle = theme.title; g.font = '700 26px system-ui'; g.textAlign = 'left';
   g.fillText(Ltitle, 40, 50);
   const td = totalDims();
-  g.fillStyle = '#9ca3af'; g.font = '500 16px system-ui';
+  g.fillStyle = theme.subtitle; g.font = '500 16px system-ui';
   g.fillText(`LARGURA TOTAL: ${td.w ?? '—'} cm   |   ALTURA TOTAL: ${td.h ?? '—'} cm`, 40, 78);
 
   // área de desenho do layout
@@ -701,7 +761,10 @@ function drawSchematic() {
     const dw = iw * sc, dh = ih * sc;
     const ox = area.x + (area.w - dw) / 2, oy = area.y + (area.h - dh) / 2;
     L = (px, py) => ({ x: ox + px * sc, y: oy + py * sc });
+    g.save();
+    g.globalAlpha = theme.imageAlpha;   // 50% no modo impressão p/ economizar tinta
     g.drawImage(state.image, ox, oy, dw, dh);
+    g.restore();
   } else {
     // sem imagem: usa a caixa das peças
     const sc = Math.min(area.w / bb.w, area.h / bb.h);
@@ -713,7 +776,7 @@ function drawSchematic() {
   // grade suave somente no plano do layout/imagem
   g.save();
   g.beginPath(); g.rect(area.x, area.y, area.w, area.h); g.clip();
-  g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1;
+  g.strokeStyle = theme.grid; g.lineWidth = 1;
   for (let gx = area.x; gx <= area.x + area.w; gx += 40) { g.beginPath(); g.moveTo(gx + .5, area.y); g.lineTo(gx + .5, area.y + area.h); g.stroke(); }
   for (let gy = area.y; gy <= area.y + area.h; gy += 40) { g.beginPath(); g.moveTo(area.x, gy + .5); g.lineTo(area.x + area.w, gy + .5); g.stroke(); }
   g.restore();
@@ -721,16 +784,17 @@ function drawSchematic() {
   // peças contornadas por cima
   for (const p of state.pieces) {
     const a = L(p.x, p.y), b = L(p.x + p.w, p.y + p.h);
-    g.fillStyle = state.image ? hexToRgba(p.color, 0.12) : '#1c1f26';
+    const pc = pieceColor(p.color);
+    g.fillStyle = state.image ? hexToRgba(pc, theme.pieceFillAlpha) : theme.pieceFillNoImg;
     g.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-    g.lineWidth = 3; g.strokeStyle = p.color;
+    g.lineWidth = 3; g.strokeStyle = pc;
     g.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
     // rótulo com chip para boa leitura sobre a foto
     const cxp = (a.x + b.x) / 2, cyp = (a.y + b.y) / 2;
     g.font = '700 18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
     const tw = g.measureText(p.label).width;
-    g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(cxp - tw / 2 - 7, cyp - 13, tw + 14, 26);
-    g.fillStyle = '#f3f4f6'; g.fillText(p.label, cxp, cyp);
+    g.fillStyle = theme.chipBg; g.fillRect(cxp - tw / 2 - 7, cyp - 13, tw + 14, 26);
+    g.fillStyle = theme.chipText; g.fillText(p.label, cxp, cyp);
   }
 
   // dimensão total no topo
@@ -739,7 +803,7 @@ function drawSchematic() {
   dimV(g, p0.y, p1.y, p0.x - 55, (td.h ?? '—') + ' cm');
 
   // ----- Painel direito: medidas individuais -----
-  g.fillStyle = '#f3f4f6'; g.font = '700 24px system-ui'; g.textAlign = 'left';
+  g.fillStyle = theme.title; g.font = '700 24px system-ui'; g.textAlign = 'left';
   g.fillText('MEDIDAS INDIVIDUAIS DAS PEÇAS', 1010, 50);
 
   state.pieces.forEach((p, i) => {
@@ -749,13 +813,13 @@ function drawSchematic() {
   });
 
   // rodapé (notas)
-  g.fillStyle = '#6b7280'; g.font = '500 14px system-ui'; g.textAlign = 'left';
+  g.fillStyle = theme.footer; g.font = '500 14px system-ui'; g.textAlign = 'left';
   g.fillText('Gerado com Mapa de Peças de Madeira · medidas em cm', 40, H - 20);
 }
 
 function drawPieceCard(g, p, x, y, w, h, suffix) {
   // título
-  g.fillStyle = '#f3f4f6'; g.font = '700 17px system-ui'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  g.fillStyle = theme.title; g.font = '700 17px system-ui'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
   g.fillText(p.label + suffix, x, y + 4);
 
   const d = pieceDims(p);
@@ -766,8 +830,8 @@ function drawPieceCard(g, p, x, y, w, h, suffix) {
   if (bh > box.h) { bh = box.h; bw = box.h * ar; }
   const rx = box.x + (box.w - bw) / 2, ry = box.y;
 
-  g.fillStyle = '#1c1f26'; g.fillRect(rx, ry, bw, bh);
-  g.lineWidth = 3; g.strokeStyle = p.color; g.strokeRect(rx, ry, bw, bh);
+  g.fillStyle = theme.cardBox; g.fillRect(rx, ry, bw, bh);
+  g.lineWidth = 3; g.strokeStyle = pieceColor(p.color); g.strokeRect(rx, ry, bw, bh);
 
   // largura (embaixo) e altura (esquerda)
   dimH(g, rx, rx + bw, ry + bh + 24, (d.w ?? '—') + ' cm');
@@ -776,32 +840,32 @@ function drawPieceCard(g, p, x, y, w, h, suffix) {
 
 // linhas de cota
 function dimH(g, x1, x2, y, text) {
-  g.strokeStyle = '#9ca3af'; g.lineWidth = 1; g.beginPath();
+  g.strokeStyle = theme.dimLine; g.lineWidth = 1; g.beginPath();
   g.moveTo(x1, y); g.lineTo(x2, y); g.stroke();
   arrow(g, x1, y, 1); arrow(g, x2, y, -1);
   tick(g, x1, y, true); tick(g, x2, y, true);
-  g.fillStyle = '#e5e7eb'; g.font = '600 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillStyle = theme.dimText; g.font = '600 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'bottom';
   g.fillText(text, (x1 + x2) / 2, y - 5);
 }
 function dimV(g, y1, y2, x, text) {
-  g.strokeStyle = '#9ca3af'; g.lineWidth = 1; g.beginPath();
+  g.strokeStyle = theme.dimLine; g.lineWidth = 1; g.beginPath();
   g.moveTo(x, y1); g.lineTo(x, y2); g.stroke();
   arrowV(g, x, y1, 1); arrowV(g, x, y2, -1);
   tick(g, x, y1, false); tick(g, x, y2, false);
   g.save(); g.translate(x - 6, (y1 + y2) / 2); g.rotate(-Math.PI / 2);
-  g.fillStyle = '#e5e7eb'; g.font = '600 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillStyle = theme.dimText; g.font = '600 15px system-ui'; g.textAlign = 'center'; g.textBaseline = 'bottom';
   g.fillText(text, 0, 0); g.restore();
 }
 function arrow(g, x, y, dir) {
-  g.fillStyle = '#9ca3af'; g.beginPath();
+  g.fillStyle = theme.arrow; g.beginPath();
   g.moveTo(x, y); g.lineTo(x + dir * 8, y - 4); g.lineTo(x + dir * 8, y + 4); g.fill();
 }
 function arrowV(g, x, y, dir) {
-  g.fillStyle = '#9ca3af'; g.beginPath();
+  g.fillStyle = theme.arrow; g.beginPath();
   g.moveTo(x, y); g.lineTo(x - 4, y + dir * 8); g.lineTo(x + 4, y + dir * 8); g.fill();
 }
 function tick(g, x, y, horizontal) {
-  g.strokeStyle = '#6b7280'; g.lineWidth = 1; g.beginPath();
+  g.strokeStyle = theme.tick; g.lineWidth = 1; g.beginPath();
   if (horizontal) { g.moveTo(x, y - 6); g.lineTo(x, y + 6); }
   else { g.moveTo(x - 6, y); g.lineTo(x + 6, y); }
   g.stroke();
