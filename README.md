@@ -51,8 +51,8 @@ arquivos JSON num diretório local (`./data`). Nenhum dado sai do seu computador
 
 1. **Obtenha o código** (clone ou cópia da pasta):
    ```bash
-   git clone <url-do-repositorio> cortacerto
-   cd cortacerto
+   git clone https://github.com/helviojunior/corta-certo.git
+   cd corta-certo
    ```
 
 2. **Suba o container** (build + execução em segundo plano):
