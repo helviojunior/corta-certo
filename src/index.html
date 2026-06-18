@@ -4,13 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mapa de Peças de Madeira</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
+    <a class="brand brand-link" href="/" title="Voltar aos projetos">
       <span class="logo">🪵</span>
       <span>Mapa de Peças <small>de Madeira</small></span>
+    </a>
+
+    <div class="project-bar">
+      <a class="btn" href="/" title="Voltar aos projetos">← Projetos</a>
+      <input type="text" id="projName" class="proj-name" placeholder="Nome do projeto" />
+      <span id="saveStatus" class="save-status muted">—</span>
     </div>
 
     <div class="toolbar">
@@ -28,8 +34,9 @@
 
       <div class="spacer"></div>
 
+      <button class="btn" id="btnOptimize" title="Igualar medidas próximas (dentro de uma tolerância) para otimizar o plano de corte">✨ Otimizar</button>
       <button class="btn" id="btnSchematic" title="Gerar esquemático">📐 Esquemático</button>
-      <button class="btn" id="btnSaveJson" title="Salvar projeto (.json)">💾 Salvar</button>
+      <button class="btn" id="btnSaveJson" title="Exportar projeto (.json)">⬇ Exportar</button>
       <label class="btn" title="Abrir projeto (.json)">
         📂 Abrir
         <input type="file" id="loadInput" accept="application/json,.json" hidden />
@@ -136,6 +143,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

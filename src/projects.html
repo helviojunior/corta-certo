@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projetos — Mapa de Peças de Madeira</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="projects-page">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🪵</span>
+      <span>Mapa de Peças <small>de Madeira</small></span>
+    </div>
+    <div class="toolbar">
+      <div class="spacer"></div>
+      <a class="btn" href="/corte" title="Gerar plano de corte de chapas">✂ Plano de corte</a>
+      <button class="btn" id="btnNew" title="Criar novo projeto">➕ Novo projeto</button>
+    </div>
+  </header>
+
+  <main class="projects">
+    <h1 class="projects-title">Seus projetos</h1>
+    <ul id="projList" class="project-grid"></ul>
+    <div id="emptyProjects" class="empty-projects" hidden>
+      Nenhum projeto ainda. Clique em <strong>➕ Novo projeto</strong> para começar.
+    </div>
+  </main>
+
+  <script src="/projects.js"></script>
+</body>
+</html>

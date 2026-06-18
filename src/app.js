@@ -21,6 +21,8 @@ const state = {
   nextLabel: 1,
   crop: null,            // {x,y,w,h} em coords de imagem (seleção de recorte pendente)
   snapHalf: false,       // arredondar medidas para 0,5 cm
+  projectId: null,       // UUID do projeto (rota /p/<uuid>)
+  projectName: '',       // nome do projeto
 };
 
 // ---------- DOM ----------
@@ -294,7 +296,7 @@ window.addEventListener('mouseup', e => {
     const x = Math.min(drag.x0, drag.x1), y = Math.min(drag.y0, drag.y1);
     const w = Math.abs(drag.x1 - drag.x0), h = Math.abs(drag.y1 - drag.y0);
     if (w > 5 && h > 5) addPiece(x, y, w, h);
-    setTool('select');
+    // mantém a ferramenta "Peça" ativa para desenhar várias peças em sequência
   } else if (drag.mode === 'calibrate') {
     const len = Math.hypot(drag.x1 - drag.x0, drag.y1 - drag.y0);
     if (len > 4) {
@@ -302,7 +304,7 @@ window.addEventListener('mouseup', e => {
       if (cm > 0) {
         state.pxPerCm = len / cm;
         state.refLine = { x1: drag.x0, y1: drag.y0, x2: drag.x1, y2: drag.y1, cm };
-        updateScaleInfo(); renderPieceList(); syncProps();
+        updateScaleInfo(); renderPieceList(); syncProps(); scheduleSave();
       }
     }
     setTool('select');
@@ -314,6 +316,8 @@ window.addEventListener('mouseup', e => {
     const cw = clamp(x + w, 0, iw) - cx, ch = clamp(y + h, 0, ih) - cy;
     if (cw > 8 && ch > 8) { state.crop = { x: cx, y: cy, w: cw, h: ch }; showCropBar(); }
     else { state.crop = null; hideCropBar(); }
+  } else if (drag.mode === 'move' || drag.mode === 'resize') {
+    scheduleSave();
   }
   drag = null; render();
 });
@@ -370,7 +374,7 @@ window.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown') sel.y += step;
     if (e.key === 'ArrowLeft') sel.x -= step;
     if (e.key === 'ArrowRight') sel.x += step;
-    render(); syncProps();
+    render(); syncProps(); scheduleSave();
   }
 });
 window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; canvas.style.cursor = ''; } });
@@ -385,11 +389,13 @@ function addPiece(x, y, w, h) {
   state.pieces.push(p);
   selectPiece(p.id);
   renderPieceList();
+  scheduleSave();
 }
 
 function deleteSelected() {
   state.pieces = state.pieces.filter(p => p.id !== state.selectedId);
   selectPiece(null); renderPieceList();
+  scheduleSave();
 }
 
 function selectPiece(id) {
@@ -410,6 +416,7 @@ function reorderPiece(dir) {
   else j = Math.max(0, i - 1);
   state.pieces.splice(j, 0, p);
   render(); renderPieceList();
+  scheduleSave();
 }
 
 // ---------- Recorte ----------
@@ -450,6 +457,7 @@ const pieceListEl = document.getElementById('pieceList');
 const pieceCountEl = document.getElementById('pieceCount');
 const propsPanel = document.getElementById('propsPanel');
 
+let dragSrcId = null;
 function renderPieceList() {
   pieceCountEl.textContent = state.pieces.length;
   pieceListEl.innerHTML = '';
@@ -457,12 +465,48 @@ function renderPieceList() {
     const d = pieceDims(p);
     const li = document.createElement('li');
     li.className = 'piece-item' + (p.id === state.selectedId ? ' selected' : '');
-    li.innerHTML = `<span class="piece-swatch" style="background:${p.color}"></span>
+    li.draggable = true;
+    li.dataset.id = p.id;
+    li.innerHTML = `<span class="piece-handle" title="Arraste para reordenar">⋮⋮</span>
+      <span class="piece-swatch" style="background:${p.color}"></span>
       <span class="piece-name">${p.label}</span>
       <span class="piece-dims">${d.w != null ? d.w + '×' + d.h + ' cm' : '—'}</span>`;
     li.addEventListener('click', () => selectPiece(p.id));
+
+    // arrastar para reordenar (a ordem define o empilhamento: topo = trás)
+    li.addEventListener('dragstart', e => {
+      dragSrcId = p.id; li.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(p.id));
+    });
+    li.addEventListener('dragend', () => { dragSrcId = null; li.classList.remove('dragging'); clearDropMarks(); });
+    li.addEventListener('dragover', e => {
+      if (dragSrcId == null || dragSrcId === p.id) return;
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      clearDropMarks();
+      li.classList.add(isAfter(e, li) ? 'drop-after' : 'drop-before');
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drop-before', 'drop-after'));
+    li.addEventListener('drop', e => {
+      e.preventDefault();
+      const after = isAfter(e, li);
+      clearDropMarks();
+      if (dragSrcId != null && dragSrcId !== p.id) movePieceRelativeTo(dragSrcId, p.id, after);
+    });
+
     pieceListEl.appendChild(li);
   }
+}
+function isAfter(e, li) { const r = li.getBoundingClientRect(); return (e.clientY - r.top) > r.height / 2; }
+function clearDropMarks() { pieceListEl.querySelectorAll('.piece-item').forEach(el => el.classList.remove('drop-before', 'drop-after')); }
+function movePieceRelativeTo(srcId, targetId, after) {
+  const from = state.pieces.findIndex(p => p.id === srcId);
+  if (from < 0) return;
+  const [p] = state.pieces.splice(from, 1);
+  let to = state.pieces.findIndex(pp => pp.id === targetId);
+  if (to < 0) state.pieces.push(p);
+  else state.pieces.splice(after ? to + 1 : to, 0, p);
+  render(); renderPieceList(); scheduleSave();
 }
 
 const F = id => document.getElementById(id);
@@ -483,7 +527,7 @@ function syncProps() {
 }
 
 function bindProps() {
-  const upd = fn => () => { const p = getPiece(state.selectedId); if (!p) return; fn(p); render(); renderPieceList(); };
+  const upd = fn => () => { const p = getPiece(state.selectedId); if (!p) return; fn(p); render(); renderPieceList(); scheduleSave(); };
   F('pLabel').addEventListener('input', upd(p => p.label = F('pLabel').value));
   F('pColorName').addEventListener('input', upd(p => p.colorName = F('pColorName').value));
   F('pColor').addEventListener('input', upd(p => p.color = F('pColor').value));
@@ -501,8 +545,12 @@ function bindProps() {
     }));
   }
   F('btnDelete').addEventListener('click', deleteSelected);
-  F('totalW').addEventListener('input', () => { state.totalWidthCm = F('totalW').value ? +F('totalW').value : null; });
-  F('totalH').addEventListener('input', () => { state.totalHeightCm = F('totalH').value ? +F('totalH').value : null; });
+  F('totalW').addEventListener('input', () => { state.totalWidthCm = F('totalW').value ? +F('totalW').value : null; scheduleSave(); });
+  F('totalH').addEventListener('input', () => { state.totalHeightCm = F('totalH').value ? +F('totalH').value : null; scheduleSave(); });
+
+  // nome do projeto
+  const nameEl = F('projName');
+  if (nameEl) nameEl.addEventListener('input', () => { state.projectName = nameEl.value; scheduleSave(); });
 
   // camadas (z-order)
   F('btnLayerFront').addEventListener('click', () => reorderPiece('front'));
@@ -514,7 +562,7 @@ function bindProps() {
   F('snapHalf').addEventListener('change', () => {
     state.snapHalf = F('snapHalf').checked;
     if (state.snapHalf) snapAllPieces();
-    render(); renderPieceList(); syncProps();
+    render(); renderPieceList(); syncProps(); scheduleSave();
   });
 
   // barra de recorte
@@ -557,20 +605,22 @@ function handleFile(file) {
     reader.readAsDataURL(file);
   } else if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
     const reader = new FileReader();
-    reader.onload = () => { try { loadProject(JSON.parse(reader.result)); } catch (err) { alert('Arquivo inválido: ' + err.message); } };
+    reader.onload = () => { try { loadProject(JSON.parse(reader.result), { save: true }); } catch (err) { alert('Arquivo inválido: ' + err.message); } };
     reader.readAsText(file);
   } else {
     alert('Tipo de arquivo não suportado: ' + (file.type || file.name));
   }
 }
 
-function loadImage(dataUrl, name) {
+function loadImage(dataUrl, name, opts = {}) {
   const img = new Image();
   img.onload = () => {
     state.image = img; state.imageData = dataUrl; state.imageName = name || '';
     emptyHint.style.display = 'none';
     fitView(); render();
     statusEl.textContent = `${img.naturalWidth}×${img.naturalHeight}px`;
+    suppressSave = false;
+    if (opts.save !== false) scheduleSave();
   };
   img.onerror = () => alert('Não foi possível carregar a imagem.');
   img.src = dataUrl;
@@ -603,9 +653,9 @@ window.addEventListener('paste', e => {
 // --- Clicar na área vazia abre o seletor de imagem ---
 stageEl.addEventListener('click', () => { if (!state.image) document.getElementById('imageInput').click(); });
 
-// ---------- Salvar / Abrir ----------
-document.getElementById('btnSaveJson').addEventListener('click', () => {
-  const data = {
+// ---------- Serialização ----------
+function serializeProject() {
+  return {
     version: 1, app: 'mapa-pecas-madeira',
     image: { dataUrl: state.imageData, name: state.imageName,
       width: state.image ? state.image.naturalWidth : 0, height: state.image ? state.image.naturalHeight : 0 },
@@ -614,21 +664,75 @@ document.getElementById('btnSaveJson').addEventListener('click', () => {
     options: { snapHalf: state.snapHalf },
     pieces: state.pieces,
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  download(blob, (state.imageName.replace(/\.[^.]+$/, '') || 'projeto') + '-pecas.json');
+}
+
+// ---------- Persistência no servidor (auto-save em ./data) ----------
+let suppressSave = false;          // evita salvar durante o carregamento do projeto
+let saveTimer = null, saving = false, dirtyAgain = false;
+
+function setSaveStatus(s) {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  const map = { saved: '✓ Salvo', saving: '⏳ Salvando…', dirty: '● Não salvo', error: '⚠ Erro ao salvar' };
+  el.textContent = map[s] || '—';
+  el.style.color = s === 'error' ? '#ffb4b4' : (s === 'saved' ? '#84cc16' : '');
+}
+
+function scheduleSave() {
+  if (suppressSave || !state.projectId) return;
+  setSaveStatus('dirty');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 700);
+}
+
+async function saveNow() {
+  if (!state.projectId) return;
+  if (saving) { dirtyAgain = true; return; }
+  saving = true; setSaveStatus('saving');
+  try {
+    const r = await fetch(`/api/projects/${state.projectId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: state.projectName, data: serializeProject() }),
+    });
+    setSaveStatus(r.ok ? 'saved' : 'error');
+  } catch { setSaveStatus('error'); }
+  saving = false;
+  if (dirtyAgain) { dirtyAgain = false; scheduleSave(); }
+}
+
+// salva o que der ao sair (melhor esforço)
+window.addEventListener('beforeunload', () => {
+  if (!state.projectId || suppressSave) return;
+  try {
+    fetch(`/api/projects/${state.projectId}`, {
+      method: 'PUT', keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: state.projectName, data: serializeProject() }),
+    });
+  } catch {}
+});
+
+// ---------- Salvar / Abrir (exportar/importar .json) ----------
+document.getElementById('btnSaveJson').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(serializeProject(), null, 2)], { type: 'application/json' });
+  const base = state.projectName || state.imageName.replace(/\.[^.]+$/, '') || 'projeto';
+  download(blob, base + '-pecas.json');
 });
 
 document.getElementById('loadInput').addEventListener('change', e => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    try { loadProject(JSON.parse(reader.result)); }
+    try { loadProject(JSON.parse(reader.result), { save: true }); }
     catch (err) { alert('Arquivo inválido: ' + err.message); }
   };
   reader.readAsText(file);
 });
 
-function loadProject(d) {
+function loadProject(d, { save = false } = {}) {
+  suppressSave = true;   // não dispara auto-save durante o carregamento em massa
+  d = d || {};
   state.pieces = (d.pieces || []).map(p => ({ ...p }));
   state.pxPerCm = d.scale?.pxPerCm ?? null;
   state.refLine = d.scale?.refLine ?? null;
@@ -641,8 +745,8 @@ function loadProject(d) {
   F('totalH').value = state.totalHeightCm ?? '';
   F('snapHalf').checked = state.snapHalf;
   updateScaleInfo(); renderPieceList(); selectPiece(null);
-  if (d.image?.dataUrl) loadImage(d.image.dataUrl, d.image.name);
-  else render();
+  if (d.image?.dataUrl) loadImage(d.image.dataUrl, d.image.name, { save });
+  else { render(); suppressSave = false; if (save) scheduleSave(); }
 }
 
 function download(blob, filename) {
@@ -662,7 +766,8 @@ document.getElementById('btnSchematic').addEventListener('click', () => {
 document.getElementById('btnCloseModal').addEventListener('click', () => modal.hidden = true);
 modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
 document.getElementById('btnExportPng').addEventListener('click', () => {
-  document.getElementById('schematic').toBlob(b => download(b, 'esquematico.png'), 'image/png');
+  const base = (state.projectName || 'esquematico').replace(/[^\w\-]+/g, '_');
+  document.getElementById('schematic').toBlob(b => download(b, base + '.png'), 'image/png');
 });
 document.getElementById('btnExportPdf').addEventListener('click', exportPdf);
 
@@ -714,7 +819,7 @@ function exportPdf() {
   const win = window.open('', '_blank');
   if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Esquemático — ${state.imageName || 'peças'}</title>
+    <title>Esquemático — ${state.projectName || state.imageName || 'peças'}</title>
     <style>
       @page { size: A4 portrait; margin: 10mm; }
       html, body { margin: 0; padding: 0; background: #fff; }
@@ -744,7 +849,7 @@ function drawSchematic(themeName = 'screen', targetCanvas) {
   const colorName = p => p.colorName ? ` (${p.colorName})` : '';
 
   // ----- Painel esquerdo: layout -----
-  const Ltitle = 'ESQUEMA DE PEÇAS';
+  const Ltitle = (state.projectName || 'ESQUEMA DE PEÇAS').toUpperCase();
   g.fillStyle = theme.title; g.font = '700 26px system-ui'; g.textAlign = 'left';
   g.fillText(Ltitle, 40, 50);
   const td = totalDims();
@@ -871,8 +976,87 @@ function tick(g, x, y, horizontal) {
   g.stroke();
 }
 
-// ---------- Init ----------
+// ---------- Otimizar medidas ----------
+// Analisa as dimensões de todas as peças e iguala valores próximos (dentro de
+// uma tolerância) para criar mais peças de mesmo tamanho — melhora o
+// aproveitamento e simplifica o plano de corte. Largura e altura são tratadas
+// de forma independente.
+function clusterValues(values, tol) {
+  const uniq = [...new Set(values)].sort((a, b) => a - b);
+  const map = {};
+  let i = 0;
+  while (i < uniq.length) {
+    let j = i;
+    const start = uniq[i];
+    while (j + 1 < uniq.length && uniq[j + 1] - start <= tol) j++;   // limita o grupo a 'tol'
+    const members = uniq.slice(i, j + 1);
+    const mean = members.reduce((a, b) => a + b, 0) / members.length;
+    const rep = Math.round(mean * 2) / 2;   // representante arredondado a 0,5 cm
+    for (const m of members) map[m] = rep;
+    i = j + 1;
+  }
+  return map;
+}
+
+function optimizePieces() {
+  const dims = state.pieces.map(p => ({ p, d: pieceDims(p) })).filter(x => x.d.w != null && x.d.h != null);
+  if (!dims.length) { alert('Nenhuma peça com medida definida. Calibre a escala ou use medidas manuais.'); return; }
+
+  const ans = prompt('Otimizar medidas — tolerância máxima em cm.\nPeças com largura/altura dentro dessa diferença passam a ter a mesma medida.', '1');
+  if (ans == null) return;
+  const tol = parseFloat(String(ans).replace(',', '.'));
+  if (!(tol >= 0)) { alert('Tolerância inválida.'); return; }
+
+  const wMap = clusterValues(dims.map(x => x.d.w), tol);
+  const hMap = clusterValues(dims.map(x => x.d.h), tol);
+
+  let changed = 0;
+  for (const { p, d } of dims) {
+    const nw = wMap[d.w] ?? d.w, nh = hMap[d.h] ?? d.h;
+    if (nw !== d.w || nh !== d.h) changed++;
+    if (state.pxPerCm) {
+      p.w = Math.max(2, nw * state.pxPerCm);
+      p.h = Math.max(2, nh * state.pxPerCm);
+      if (p.manual) { p.realW = nw; p.realH = nh; }
+    } else {
+      p.manual = true; p.realW = nw; p.realH = nh;
+    }
+  }
+
+  const wSizes = new Set(Object.values(wMap)).size, hSizes = new Set(Object.values(hMap)).size;
+  render(); renderPieceList(); syncProps(); scheduleSave();
+  alert(`Otimização concluída.\n${changed} peça(s) ajustada(s).\nLarguras distintas: ${wSizes} · Alturas distintas: ${hSizes}.`);
+}
+
+// ---------- Projeto / Init ----------
+function getProjectIdFromUrl() {
+  const m = location.pathname.match(/^\/p\/([0-9a-f-]+)$/i);
+  return m ? m[1] : null;
+}
+
+async function initProject() {
+  const id = getProjectIdFromUrl();
+  if (!id) { location.href = '/'; return; }   // sem projeto: volta para a lista
+  state.projectId = id;
+  setSaveStatus('saving');
+  try {
+    const r = await fetch(`/api/projects/${id}`);
+    if (!r.ok) throw new Error('not found');
+    const proj = await r.json();
+    state.projectName = proj.name || 'Projeto';
+    const nameEl = F('projName'); if (nameEl) nameEl.value = state.projectName;
+    document.title = `${state.projectName} — Mapa de Peças`;
+    if (proj.data) loadProject(proj.data, { save: false });
+    setSaveStatus('saved');
+  } catch {
+    alert('Projeto não encontrado.');
+    location.href = '/';
+  }
+}
+
 window.addEventListener('resize', resizeCanvas);
+document.getElementById('btnOptimize').addEventListener('click', optimizePieces);
 bindProps();
 setTool('select');
 resizeCanvas();
+initProject();

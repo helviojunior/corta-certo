@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plano de corte — Mapa de Peças de Madeira</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="cut-page">
+  <header class="topbar">
+    <a class="brand brand-link" href="/" title="Voltar aos projetos">
+      <span class="logo">🪵</span>
+      <span>Mapa de Peças <small>de Madeira</small></span>
+    </a>
+    <div class="toolbar">
+      <a class="btn" href="/">← Projetos</a>
+      <div class="spacer"></div>
+      <button class="btn" id="btnGenerate">⚙ Gerar plano</button>
+      <button class="btn" id="btnExportPdf" disabled title="Gere o plano primeiro">🖨 Exportar PDF</button>
+    </div>
+  </header>
+
+  <main class="cut-layout">
+    <!-- Configuração + seleção -->
+    <aside class="cut-config">
+      <div class="panel">
+        <h2>Chapa de madeira</h2>
+        <label class="cfg-label">Tamanho (mm)
+          <select id="sheetPreset"></select>
+        </label>
+        <div class="field-grid" style="margin-top:8px;">
+          <label>Largura (mm)<input type="number" id="sheetW" min="1" step="1" /></label>
+          <label>Altura (mm)<input type="number" id="sheetH" min="1" step="1" /></label>
+        </div>
+        <label class="cfg-label" style="margin-top:10px;">Espessura de corte / kerf (mm)
+          <input type="number" id="kerf" min="0" step="0.5" value="4" />
+        </label>
+        <label class="manual-toggle" style="margin-top:12px;">
+          <input type="checkbox" id="allowRotate" checked /> Permitir rotacionar peças 90°
+        </label>
+      </div>
+
+      <div class="panel grow">
+        <h2>Peças <span id="selCount" class="badge">0</span></h2>
+        <p class="hint" style="margin-top:0;">Marque projetos inteiros ou expanda para escolher peças.</p>
+        <div id="projTree" class="proj-tree"></div>
+      </div>
+    </aside>
+
+    <!-- Relatório -->
+    <section class="cut-preview">
+      <div id="report" class="report">
+        <div class="report-empty">
+          Configure a chapa, selecione as peças e clique em <strong>⚙ Gerar plano</strong>.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/cutplan.js"></script>
+</body>
+</html>
