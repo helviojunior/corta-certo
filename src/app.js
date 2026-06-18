@@ -1,4 +1,4 @@
-/* Mapa de Peças de Madeira — editor de canvas + esquemático */
+/* CortaCerto — editor de canvas + esquemático */
 'use strict';
 
 // ---------- Estado ----------
@@ -928,7 +928,7 @@ function drawSchematic(themeName = 'screen', targetCanvas) {
 
   // rodapé (notas)
   g.fillStyle = theme.footer; g.font = '500 14px system-ui'; g.textAlign = 'left';
-  g.fillText('Gerado com Mapa de Peças de Madeira · medidas em cm', 40, H - 20);
+  g.fillText('Gerado com CortaCerto · medidas em cm', 40, H - 20);
 }
 
 function drawPieceCard(g, p, x, y, w, h, suffix) {
@@ -1054,7 +1054,7 @@ async function initProject() {
     const proj = await r.json();
     state.projectName = proj.name || 'Projeto';
     const nameEl = F('projName'); if (nameEl) nameEl.value = state.projectName;
-    document.title = `${state.projectName} — Mapa de Peças`;
+    document.title = `${state.projectName} — CortaCerto`;
     if (proj.data) loadProject(proj.data, { save: false });
     setSaveStatus('saved');
   } catch {
