@@ -11,6 +11,22 @@ arquivos JSON num diretório local (`./data`). Nenhum dado sai do seu computador
 
 ---
 
+## 📸 Telas
+
+### Lista de projetos
+![Lista de projetos](docs/screenshots/projetos.png)
+
+### Editor — peças sobre a foto de referência
+![Editor](docs/screenshots/editor.png)
+
+### Esquemático com as medidas
+![Esquemático](docs/screenshots/esquematico.png)
+
+### Plano de corte otimizado
+![Plano de corte](docs/screenshots/plano-de-corte.png)
+
+---
+
 ## ✨ Funcionalidades
 
 ### Projetos
