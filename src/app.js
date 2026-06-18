@@ -398,6 +398,15 @@ function deleteSelected() {
   scheduleSave();
 }
 
+function deleteAllPieces() {
+  if (!state.pieces.length) return;
+  if (!confirm(`Excluir todas as ${state.pieces.length} peça(s)? Esta ação não pode ser desfeita.`)) return;
+  state.pieces = [];
+  state.nextId = 1; state.nextLabel = 1;
+  selectPiece(null); renderPieceList();
+  scheduleSave();
+}
+
 function selectPiece(id) {
   state.selectedId = id;
   renderPieceList(); render(); syncProps();
@@ -1056,6 +1065,7 @@ async function initProject() {
 
 window.addEventListener('resize', resizeCanvas);
 document.getElementById('btnOptimize').addEventListener('click', optimizePieces);
+document.getElementById('btnDeleteAll').addEventListener('click', deleteAllPieces);
 bindProps();
 setTool('select');
 resizeCanvas();

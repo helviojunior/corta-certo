@@ -145,6 +145,8 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .btn.danger { border-color: #5a2a2a; color: #ffb4b4; }
 .btn.danger:hover { background: #3a1f1f; }
 .btn.full { width: 100%; justify-content: center; margin-top: 10px; }
+.btn-sm { padding: 3px 8px; font-size: 11px; }
+.panel h2 .btn-sm { margin-left: auto; }
 
 .tools { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
 .tool {
