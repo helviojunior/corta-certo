@@ -69,12 +69,47 @@ async function newProject() {
 
 document.getElementById('btnNew').addEventListener('click', newProject);
 
+// Importar um projeto salvo em .json -> cria um novo projeto e abre no editor
+async function importProjectFile(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (err) {
+    return uiAlert('Arquivo inválido: ' + err.message);
+  }
+  if (!data || typeof data !== 'object' || !Array.isArray(data.pieces)) {
+    return uiAlert('Este arquivo não parece ser um projeto do CortaCerto.');
+  }
+  const base = (file.name || 'projeto').replace(/\.[^.]+$/, '').replace(/-pecas$/i, '');
+  try {
+    const r = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: base || 'Projeto importado', data }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const proj = await r.json();
+    location.href = `/p/${proj.id}`;
+  } catch {
+    uiAlert('Não foi possível importar o projeto.');
+  }
+}
+
+const loadInput = document.getElementById('loadInput');
+loadInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) importProjectFile(file);
+});
+function openImport() { loadInput.click(); }
+
 // Barra de menus (somente os itens aplicáveis à listagem ficam ativos)
 applyShortcutLabels();
 setupMenubar();
 populateRecent();
 const onMenu = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
 onMenu('miNew', newProject);
+onMenu('miOpen', openImport);
 onMenu('miNewWindow', () => window.open('/', '_blank'));
 onMenu('miCutplan', () => { location.href = '/corte'; });
 onMenu('miAbout', () => { location.href = '/sobre'; });

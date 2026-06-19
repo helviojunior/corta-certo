@@ -3,7 +3,7 @@
    indo no máximo até 0.999. Ex.: 0.1 → 0.2 → … → 0.9 → 0.10 → … → 0.999. */
 'use strict';
 
-const APP_VERSION = '0.6';
+const APP_VERSION = '0.7';
 const APP_NAME = 'CortaCerto';
 const APP_URL = 'https://github.com/helviojunior/corta-certo';
 

@@ -21,7 +21,7 @@
         <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">📁 Projeto</button>
         <ul class="menu-pop" role="menu">
           <li class="menu-item" id="miNew" role="menuitem"><span class="mi-ico">➕</span><span class="mi-lbl">Novo projeto</span></li>
-          <li class="menu-item disabled" role="menuitem"><span class="mi-ico">📂</span><span class="mi-lbl">Abrir…</span></li>
+          <li class="menu-item" id="miOpen" role="menuitem"><span class="mi-ico">📂</span><span class="mi-lbl">Abrir…</span></li>
           <li class="menu-item has-sub" role="menuitem" aria-haspopup="true">
             <span class="mi-ico">🕘</span><span class="mi-lbl">Abrir recente</span><span class="mi-arrow">›</span>
             <ul class="menu-pop submenu" id="recentList" role="menu">
@@ -76,6 +76,8 @@
       Nenhum projeto ainda. Clique em <strong>➕ Novo projeto</strong> para começar.
     </div>
   </main>
+
+  <input type="file" id="loadInput" accept="application/json,.json" hidden />
 
   <script src="/version.js"></script>
   <script src="/dialog.js"></script>
