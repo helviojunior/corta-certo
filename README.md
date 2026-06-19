@@ -13,6 +13,14 @@ arquivos JSON num diretório local (`./data`). Nenhum dado sai do seu computador
 
 ---
 
+## 🎬 Demonstração
+
+[![Demonstração do CortaCerto no YouTube](https://img.youtube.com/vi/ErMHE1VJo-Y/maxresdefault.jpg)](https://youtu.be/ErMHE1VJo-Y)
+
+▶️ Assista no YouTube: **https://youtu.be/ErMHE1VJo-Y**
+
+---
+
 ## 📸 Telas
 
 ### Lista de projetos
