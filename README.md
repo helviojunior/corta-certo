@@ -232,3 +232,23 @@ projeto é independente do zoom/tamanho da tela.
 - O número de cortes e o comprimento de corte no plano são **estimativas**.
 - O empacotamento é uma heurística (colunas guilhotinadas) — bom aproveitamento e
   cortes válidos para seccionadora, mas não garante o ótimo absoluto.
+
+---
+
+## ⚠️ Escopo e aviso
+
+O **CortaCerto** **não pretende ser um software de design ou uma ferramenta
+profissional** de marcenaria. Ele nasceu para **bricolagem / DIY** — uso doméstico
+e amador — priorizando simplicidade e rapidez em vez de precisão milimétrica ou
+recursos de CAD/CAM.
+
+Por isso, trabalhe com uma **tolerância maior**:
+
+- As medidas vêm de uma **foto calibrada manualmente**, então têm imprecisão natural —
+  confira sempre com uma trena antes de cortar.
+- O plano de corte e as estimativas (cortes, aproveitamento, comprimento) são
+  **aproximações** para planejar e estimar material, não um roteiro exato de produção.
+- **Sempre revise o resultado** e adicione folgas/sobras à sua compra. Para projetos
+  críticos, profissionais ou em escala, use ferramentas dedicadas de CAD/nesting.
+
+Em resumo: é um **ajudante de fim de semana** para quem curte fazer móveis em casa. 🪵
