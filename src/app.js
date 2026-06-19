@@ -281,6 +281,16 @@ canvas.addEventListener('mousedown', e => {
     return;
   }
   if (state.tool === 'crop') {
+    // com uma seleção já feita, permite redimensionar pelas alças ou movê-la
+    if (state.crop) {
+      const handle = hitHandle(state.crop, sx, sy);
+      if (handle) { drag = { mode: 'cropResize', handle, start: { ...state.crop } }; return; }
+      const c = state.crop;
+      if (img.x >= c.x && img.x <= c.x + c.w && img.y >= c.y && img.y <= c.y + c.h) {
+        drag = { mode: 'cropMove', dx: img.x - c.x, dy: img.y - c.y }; return;
+      }
+    }
+    // senão, inicia uma nova seleção
     drag = { mode: 'crop', x0: img.x, y0: img.y, x1: img.x, y1: img.y };
     state.crop = null; hideCropBar();
     return;
@@ -321,6 +331,13 @@ window.addEventListener('mousemove', e => {
     render();
   } else if (drag.mode === 'calibrate' || drag.mode === 'crop') {
     drag.x1 = img.x; drag.y1 = img.y; render();
+  } else if (drag.mode === 'cropResize') {
+    applyCropResize(drag, img); render(); showCropBar();
+  } else if (drag.mode === 'cropMove') {
+    const c = state.crop, iw = state.image.naturalWidth, ih = state.image.naturalHeight;
+    c.x = clamp(img.x - drag.dx, 0, iw - c.w);
+    c.y = clamp(img.y - drag.dy, 0, ih - c.h);
+    render(); showCropBar();
   } else if (drag.mode === 'move') {
     drag.p.x = img.x - drag.dx; drag.p.y = img.y - drag.dy;
     render(); syncProps();
@@ -349,6 +366,8 @@ window.addEventListener('mouseup', e => {
     const cw = clamp(x + w, 0, iw) - cx, ch = clamp(y + h, 0, ih) - cy;
     if (cw > 8 && ch > 8) { state.crop = { x: cx, y: cy, w: cw, h: ch }; showCropBar(); }
     else { state.crop = null; hideCropBar(); }
+  } else if (drag.mode === 'cropResize' || drag.mode === 'cropMove') {
+    showCropBar();
   } else if (drag.mode === 'move' || drag.mode === 'resize') {
     scheduleSave();
   }
@@ -363,6 +382,20 @@ async function askCalibration(len, seg) {
   state.pxPerCm = len / cm;
   state.refLine = { ...seg, cm };
   updateScaleInfo(); renderPieceList(); syncProps(); scheduleSave();
+}
+
+// redimensiona a seleção de recorte pela alça arrastada, preso aos limites da imagem
+function applyCropResize(d, img) {
+  const s = d.start, h = d.handle;
+  const iw = state.image.naturalWidth, ih = state.image.naturalHeight;
+  let x1 = s.x, y1 = s.y, x2 = s.x + s.w, y2 = s.y + s.h;
+  if (h.includes('w')) x1 = clamp(img.x, 0, iw);
+  if (h.includes('e')) x2 = clamp(img.x, 0, iw);
+  if (h.includes('n')) y1 = clamp(img.y, 0, ih);
+  if (h.includes('s')) y2 = clamp(img.y, 0, ih);
+  const c = state.crop;
+  c.x = Math.min(x1, x2); c.y = Math.min(y1, y2);
+  c.w = Math.max(4, Math.abs(x2 - x1)); c.h = Math.max(4, Math.abs(y2 - y1));
 }
 
 function applyResize(d, img) {
