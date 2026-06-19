@@ -8,13 +8,58 @@
 </head>
 <body class="projects-page">
   <header class="topbar">
-    <div class="brand">
+    <a class="brand brand-link" href="/" title="Página inicial">
       <span class="logo">🪵</span>
-      <span>CortaCerto <small>marcenaria</small></span>
-    </div>
+      <span class="brand-text">
+        <span class="brand-name">CortaCerto</span>
+        <span class="brand-sub"><small>marcenaria</small> <span class="brand-ver app-version"></span></span>
+      </span>
+    </a>
+
+    <nav class="menubar" aria-label="Menu principal">
+      <div class="menu">
+        <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">📁 Projeto</button>
+        <ul class="menu-pop" role="menu">
+          <li class="menu-item" id="miNew" role="menuitem"><span class="mi-ico">➕</span><span class="mi-lbl">Novo projeto</span></li>
+          <li class="menu-item disabled" role="menuitem"><span class="mi-ico">📂</span><span class="mi-lbl">Abrir…</span></li>
+          <li class="menu-item has-sub" role="menuitem" aria-haspopup="true">
+            <span class="mi-ico">🕘</span><span class="mi-lbl">Abrir recente</span><span class="mi-arrow">›</span>
+            <ul class="menu-pop submenu" id="recentList" role="menu">
+              <li class="menu-item muted">Carregando…</li>
+            </ul>
+          </li>
+          <li class="menu-sep" role="separator"></li>
+          <li class="menu-item disabled" role="menuitem"><span class="mi-ico">⧉</span><span class="mi-lbl">Duplicar</span></li>
+          <li class="menu-item disabled" role="menuitem"><span class="mi-ico">⬇</span><span class="mi-lbl">Exportar</span></li>
+          <li class="menu-sep" role="separator"></li>
+          <li class="menu-item" id="miNewWindow" role="menuitem"><span class="mi-ico">🪟</span><span class="mi-lbl">Nova janela</span></li>
+        </ul>
+      </div>
+
+      <div class="menu disabled">
+        <button class="menu-btn" type="button" disabled aria-disabled="true">📷 Imagem</button>
+      </div>
+
+      <div class="menu">
+        <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">🛠 Ferramentas</button>
+        <ul class="menu-pop" role="menu">
+          <li class="menu-item disabled" role="menuitem"><span class="mi-ico">✨</span><span class="mi-lbl">Otimizar</span></li>
+          <li class="menu-item disabled" role="menuitem"><span class="mi-ico">📐</span><span class="mi-lbl">Esquemático</span></li>
+          <li class="menu-item" id="miCutplan" role="menuitem"><span class="mi-ico">✂</span><span class="mi-lbl">Plano de corte</span></li>
+        </ul>
+      </div>
+
+      <div class="menu disabled">
+        <button class="menu-btn" type="button" disabled aria-disabled="true">🖥️ Janela</button>
+      </div>
+
+      <div class="menu">
+        <button class="menu-btn" type="button" id="miAbout">ℹ️ Sobre</button>
+      </div>
+    </nav>
+
     <div class="toolbar">
       <div class="spacer"></div>
-      <a class="btn" href="/corte" title="Gerar plano de corte de chapas">✂ Plano de corte</a>
       <button class="btn" id="btnNew" title="Criar novo projeto">➕ Novo projeto</button>
     </div>
   </header>
@@ -27,6 +72,9 @@
     </div>
   </main>
 
+  <script src="/version.js"></script>
+  <script src="/dialog.js"></script>
+  <script src="/menu.js"></script>
   <script src="/projects.js"></script>
 </body>
 </html>

@@ -41,7 +41,9 @@ async function loadList() {
     del.title = 'Excluir projeto';
     del.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (!confirm(`Excluir o projeto "${it.name || 'Sem nome'}"? Esta ação não pode ser desfeita.`)) return;
+      const ok = await uiConfirm(`Excluir o projeto "${it.name || 'Sem nome'}"? Esta ação não pode ser desfeita.`,
+        { title: 'Excluir projeto', okLabel: 'Excluir', danger: true });
+      if (!ok) return;
       await fetch(`/api/projects/${it.id}`, { method: 'DELETE' });
       loadList();
     });
@@ -51,16 +53,30 @@ async function loadList() {
   }
 }
 
-document.getElementById('btnNew').addEventListener('click', async () => {
-  const name = prompt('Nome do novo projeto:', 'Novo projeto');
+async function newProject() {
+  const name = await uiPrompt('Nome do novo projeto:', { title: 'Novo projeto', default: 'Novo projeto' });
   if (name === null) return;
-  const r = await fetch('/api/projects', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name || 'Novo projeto' }),
-  });
-  const proj = await r.json();
-  location.href = `/p/${proj.id}`;
-});
+  try {
+    const r = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name || 'Novo projeto' }),
+    });
+    const proj = await r.json();
+    location.href = `/p/${proj.id}`;
+  } catch { uiAlert('Não foi possível criar o projeto.'); }
+}
+
+document.getElementById('btnNew').addEventListener('click', newProject);
+
+// Barra de menus (somente os itens aplicáveis à listagem ficam ativos)
+applyShortcutLabels();
+setupMenubar();
+populateRecent();
+const onMenu = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+onMenu('miNew', newProject);
+onMenu('miNewWindow', () => window.open('/', '_blank'));
+onMenu('miCutplan', () => { location.href = '/corte'; });
+onMenu('miAbout', showAbout);
 
 loadList();

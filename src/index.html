@@ -8,40 +8,84 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand brand-link" href="/" title="Voltar aos projetos">
+    <a class="brand brand-link" href="/" title="Página inicial">
       <span class="logo">🪵</span>
-      <span>CortaCerto <small>marcenaria</small></span>
+      <span class="brand-text">
+        <span class="brand-name">CortaCerto</span>
+        <span class="brand-sub"><small>marcenaria</small> <span class="brand-ver app-version"></span></span>
+      </span>
     </a>
 
-    <div class="project-bar">
-      <a class="btn" href="/" title="Voltar aos projetos">← Projetos</a>
-      <input type="text" id="projName" class="proj-name" placeholder="Nome do projeto" />
-      <span id="saveStatus" class="save-status muted">—</span>
-    </div>
+    <input type="text" id="projName" class="proj-name" placeholder="Nome do projeto" />
+    <span id="saveStatus" class="save-status muted">—</span>
 
-    <div class="toolbar">
-      <label class="btn" title="Carregar imagem de fundo">
-        📷 Imagem
-        <input type="file" id="imageInput" accept="image/*" hidden />
-      </label>
-
-      <div class="tools" role="group" aria-label="Ferramentas">
-        <button class="tool active" data-tool="select" title="Selecionar / Mover (V)">↖ Selecionar</button>
-        <button class="tool" data-tool="rect" title="Desenhar peça (R)">▭ Peça</button>
-        <button class="tool" data-tool="calibrate" title="Calibrar escala (C)">📏 Calibrar</button>
-        <button class="tool" data-tool="crop" title="Recortar imagem (X)">✂ Recortar</button>
+    <nav class="menubar" aria-label="Menu principal">
+      <div class="menu">
+        <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">📁 Projeto</button>
+        <ul class="menu-pop" role="menu">
+          <li class="menu-item" id="miNew" role="menuitem"><span class="mi-ico">➕</span><span class="mi-lbl">Novo projeto</span><span class="mi-key" data-sc="mod+alt+n"></span></li>
+          <li class="menu-item" id="miOpen" role="menuitem"><span class="mi-ico">📂</span><span class="mi-lbl">Abrir…</span><span class="mi-key" data-sc="mod+alt+o"></span></li>
+          <li class="menu-item has-sub" role="menuitem" aria-haspopup="true">
+            <span class="mi-ico">🕘</span><span class="mi-lbl">Abrir recente</span><span class="mi-arrow">›</span>
+            <ul class="menu-pop submenu" id="recentList" role="menu">
+              <li class="menu-item muted">Carregando…</li>
+            </ul>
+          </li>
+          <li class="menu-sep" role="separator"></li>
+          <li class="menu-item" id="miDuplicate" role="menuitem"><span class="mi-ico">⧉</span><span class="mi-lbl">Duplicar</span><span class="mi-key" data-sc="mod+alt+d"></span></li>
+          <li class="menu-item" id="miExport" role="menuitem"><span class="mi-ico">⬇</span><span class="mi-lbl">Exportar</span><span class="mi-key" data-sc="mod+alt+s"></span></li>
+          <li class="menu-sep" role="separator"></li>
+          <li class="menu-item" id="miNewWindow" role="menuitem"><span class="mi-ico">🪟</span><span class="mi-lbl">Nova janela</span><span class="mi-key" data-sc="mod+alt+w"></span></li>
+          <li class="menu-sep" role="separator"></li>
+          <li class="menu-item" id="miClose" role="menuitem"><span class="mi-ico">✕</span><span class="mi-lbl">Fechar</span><span class="mi-key" data-sc="mod+alt+f"></span></li>
+        </ul>
       </div>
 
+      <div class="menu">
+        <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">📷 Imagem</button>
+        <ul class="menu-pop" role="menu">
+          <li class="menu-item" id="miImage" role="menuitem"><span class="mi-ico">🖼️</span><span class="mi-lbl">Carregar imagem</span></li>
+          <li class="menu-sep" role="separator"></li>
+          <li class="menu-item" id="miCrop" role="menuitem"><span class="mi-ico">✂</span><span class="mi-lbl">Recortar</span><span class="mi-key">X</span></li>
+          <li class="menu-item" id="miCalibrate" role="menuitem"><span class="mi-ico">📏</span><span class="mi-lbl">Calibrar</span><span class="mi-key">C</span></li>
+        </ul>
+      </div>
+
+      <div class="menu">
+        <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">🛠 Ferramentas</button>
+        <ul class="menu-pop" role="menu">
+          <li class="menu-item" id="miOptimize" role="menuitem"><span class="mi-ico">✨</span><span class="mi-lbl">Otimizar</span><span class="mi-key" data-sc="mod+alt+t"></span></li>
+          <li class="menu-item" id="miSchematic" role="menuitem"><span class="mi-ico">📐</span><span class="mi-lbl">Esquemático</span><span class="mi-key" data-sc="mod+alt+e"></span></li>
+          <li class="menu-item" id="miCutplan" role="menuitem"><span class="mi-ico">✂</span><span class="mi-lbl">Plano de corte</span><span class="mi-key" data-sc="mod+alt+p"></span></li>
+        </ul>
+      </div>
+
+      <div class="menu">
+        <button class="menu-btn" type="button" aria-haspopup="true" aria-expanded="false">🖥️ Janela</button>
+        <ul class="menu-pop" role="menu">
+          <li class="menu-item" id="miZoom" role="menuitem"><span class="mi-ico">🔍</span><span class="mi-lbl">Zoom 100%</span><span class="mi-key" data-sc="mod+alt+z"></span></li>
+          <li class="menu-item" id="miFill" role="menuitem"><span class="mi-ico">⤢</span><span class="mi-lbl">Preencher</span><span class="mi-key" data-sc="mod+alt+0"></span></li>
+          <li class="menu-item" id="miCenter" role="menuitem"><span class="mi-ico">🎯</span><span class="mi-lbl">Centralizar</span><span class="mi-key" data-sc="mod+alt+g"></span></li>
+        </ul>
+      </div>
+
+      <div class="menu">
+        <button class="menu-btn" type="button" id="miAbout">ℹ️ Sobre</button>
+      </div>
+    </nav>
+
+    <div class="toolbar">
       <div class="spacer"></div>
 
-      <button class="btn" id="btnOptimize" title="Igualar medidas próximas (dentro de uma tolerância) para otimizar o plano de corte">✨ Otimizar</button>
-      <button class="btn" id="btnSchematic" title="Gerar esquemático">📐 Esquemático</button>
-      <button class="btn" id="btnSaveJson" title="Exportar projeto (.json)">⬇ Exportar</button>
-      <label class="btn" title="Abrir projeto (.json)">
-        📂 Abrir
-        <input type="file" id="loadInput" accept="application/json,.json" hidden />
-      </label>
+      <div class="tools" role="group" aria-label="Ferramentas de desenho">
+        <button class="tool active" data-tool="select" title="Selecionar / Mover (V)">↖ Selecionar</button>
+        <button class="tool" data-tool="rect" title="Desenhar peça (R)">▭ Peça</button>
+        <button class="tool" id="btnTogglePieces" title="Ocultar/mostrar as peças no desenho">👁 Ocultar</button>
+      </div>
     </div>
+
+    <input type="file" id="imageInput" accept="image/*" hidden />
+    <input type="file" id="loadInput" accept="application/json,.json" hidden />
   </header>
 
   <main class="layout">
@@ -54,10 +98,10 @@
       </div>
       <div id="emptyHint" class="empty-hint">
         <div>
-          <p><strong>1.</strong> Carregue uma imagem de fundo (📷 Imagem).</p>
-          <p><strong>2.</strong> Use 📏 <strong>Calibrar</strong> para arrastar sobre uma medida conhecida e informar o tamanho em cm.</p>
-          <p><strong>3.</strong> Use ▭ <strong>Peça</strong> para desenhar os retângulos das peças.</p>
-          <p><strong>4.</strong> Gere o 📐 <strong>Esquemático</strong> e 💾 <strong>Salve</strong> o projeto.</p>
+          <p><strong>1.</strong> Carregue uma imagem em 📷 <strong>Imagem → Carregar imagem</strong> (ou arraste/cole uma imagem aqui).</p>
+          <p><strong>2.</strong> Use 📷 <strong>Imagem → Calibrar</strong> para arrastar sobre uma medida conhecida e informar o tamanho em cm.</p>
+          <p><strong>3.</strong> Selecione a ferramenta ▭ <strong>Peça</strong> e desenhe os retângulos das peças.</p>
+          <p><strong>4.</strong> Gere o esquemático em 🛠 <strong>Ferramentas → Esquemático</strong>. O projeto é salvo automaticamente.</p>
         </div>
       </div>
       <div class="status" id="status"></div>
@@ -145,6 +189,9 @@
     </div>
   </div>
 
+  <script src="/version.js"></script>
+  <script src="/dialog.js"></script>
+  <script src="/menu.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

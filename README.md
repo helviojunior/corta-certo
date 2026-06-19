@@ -29,13 +29,29 @@ arquivos JSON num diretório local (`./data`). Nenhum dado sai do seu computador
 
 ## ✨ Funcionalidades
 
+### Barra de menus
+Toda a navegação fica numa **barra de menus** estilo desktop, presente na lista de
+projetos (com os itens não aplicáveis desativados) e no editor:
+
+- **📁 Projeto** — Novo projeto, Abrir…, Abrir recente, Duplicar, Exportar, Nova
+  janela, Fechar.
+- **📷 Imagem** — Carregar/Nova imagem, Recortar, Calibrar.
+- **🛠 Ferramentas** — Otimizar, Esquemático, Plano de corte.
+- **🖥️ Janela** — Zoom 100%, Preencher, Centralizar.
+- **ℹ️ Sobre** — informações e versão do app.
+
+Os atalhos de teclado aparecem à direita de cada item e se adaptam ao sistema
+(`⌥⌘…` no macOS, `Ctrl+Alt+…` no Windows/Linux). Todos os diálogos (avisos,
+confirmações, entradas de texto) são **modais customizados** — nada do navegador.
+
 ### Projetos
 - 📁 **Vários projetos**, cada um com URL própria por UUID (`/p/<uuid>`).
 - 💾 **Auto-save** no servidor a cada alteração (gravado em `./data/<uuid>.json`).
+- ⧉ **Duplicar** o projeto atual (com um novo nome).
 - ⬇ **Exportar / 📂 Abrir** projeto em `.json` (backup, com a imagem embutida).
 
 ### Editor de peças
-- 📷 Carregar uma **imagem de fundo** (foto do painel/móvel).
+- 📷 Carregar uma **imagem de fundo** (foto do painel/móvel) pelo menu **Imagem**.
 - 📏 **Calibrar a escala**: arraste sobre uma medida conhecida e informe os cm — o
   app converte px → cm automaticamente.
 - ✂ **Recortar (crop)** a imagem (peças e calibração são reposicionadas sozinhas).
@@ -43,6 +59,7 @@ arquivos JSON num diretório local (`./data`). Nenhum dado sai do seu computador
   colorir. A ferramenta "Peça" permanece ativa para desenhar várias em sequência.
 - 🎨 Cada peça tem rótulo (D1, D2…), nome da cor, cor da borda e medidas (auto ou
   manuais).
+- 👁 **Ocultar/mostrar** as peças sobre o desenho a qualquer momento.
 - ↕ **Reordenar peças** por **arrastar e soltar** (também controla a sobreposição).
 - ⬍ Botões de **camada** (frente/trás) e 📐 **arredondar para 0,5 cm**.
 - ✨ **Otimizar**: analisa as medidas de todas as peças e **iguala valores
@@ -50,11 +67,12 @@ arquivos JSON num diretório local (`./data`). Nenhum dado sai do seu computador
 - 🗑 **Limpar**: excluir todas as peças de uma vez.
 
 ### Saídas
-- 📐 **Esquemático** com cotas totais + medidas individuais; exporta **PNG** e
-  **PDF** (fundo branco, foto a 50% para economizar tinta).
-- ✂ **Plano de corte**: escolha o tamanho da chapa, a espessura de corte (kerf) e
-  selecione projetos inteiros **ou peças individuais de vários projetos**. O app
-  empacota as peças em colunas, mostra o aproveitamento e exporta **PDF**.
+- 📐 **Esquemático** (menu Ferramentas) com cotas totais + medidas individuais;
+  exporta **PNG** e **PDF** (fundo branco, foto a 50% para economizar tinta).
+- ✂ **Plano de corte** (menu Ferramentas): escolha o tamanho da chapa, a espessura
+  de corte (kerf) e selecione projetos inteiros **ou peças individuais de vários
+  projetos**. O app empacota as peças em colunas, mostra o aproveitamento e
+  exporta **PDF**.
 
 ---
 
@@ -107,37 +125,41 @@ PORT=8080 node server.js  # ou em outra porta
 ## 🧭 Como usar
 
 ### 1) Criar/abrir um projeto
-- Na tela inicial (**/**) clique em **➕ Novo projeto** e dê um nome.
+- Na tela inicial (**/**) clique em **➕ Novo projeto** (ou **📁 Projeto → Novo
+  projeto**) e dê um nome.
 - A lista mostra todos os projetos (nº de peças, data); clique para abrir ou use
-  🗑 para excluir.
+  🗑 para excluir. **📁 Projeto → Abrir recente** lista os últimos projetos.
 
 ### 2) Mapear as peças (editor)
-1. **📷 Imagem** → carregue a foto do painel.
-2. **📏 Calibrar** → arraste sobre algo de tamanho conhecido (régua, uma medida que
-   você já sabe) e digite o valor em cm.
-3. **▭ Peça** → arraste para criar cada retângulo. Ajuste pela barra lateral
-   (rótulo, cor, posição). As medidas em cm aparecem sozinhas.
+1. **📷 Imagem → Carregar imagem** → carregue a foto do painel (ou arraste/cole a
+   imagem na área de desenho).
+2. **📷 Imagem → Calibrar** → arraste sobre algo de tamanho conhecido (régua, uma
+   medida que você já sabe) e digite o valor em cm.
+3. **▭ Peça** (paleta de ferramentas) → arraste para criar cada retângulo. Ajuste
+   pela barra lateral (rótulo, cor, posição). As medidas em cm aparecem sozinhas.
    - Marque **Medida manual** para digitar a largura/altura exatas.
-4. (Opcional) **✨ Otimizar** → informe a tolerância (ex.: `1` cm) para igualar
-   medidas próximas e facilitar o corte.
+4. (Opcional) **🛠 Ferramentas → Otimizar** → informe a tolerância (ex.: `1` cm)
+   para igualar medidas próximas e facilitar o corte.
 5. Tudo é salvo automaticamente (**✓ Salvo** no topo).
 
 ### 3) Gerar o esquemático
-- **📐 Esquemático** → confira o desenho com as cotas e exporte em **PNG** ou
-  **🖨 PDF** (otimizado para impressão).
+- **🛠 Ferramentas → Esquemático** → confira o desenho com as cotas e exporte em
+  **PNG** ou **🖨 PDF** (otimizado para impressão).
 
 ### 4) Gerar o plano de corte
-1. Na tela inicial, clique em **✂ Plano de corte** (ou acesse **/corte**).
+1. Abra **🛠 Ferramentas → Plano de corte** (ou acesse **/corte**).
 2. Defina o **tamanho da chapa** (presets ou personalizado, em mm) e a
    **espessura de corte / kerf** (ex.: `4` mm).
 3. Marque **projetos inteiros** ou expanda e selecione **peças individuais** de
    vários projetos.
 4. **⚙ Gerar plano** → veja o aproveitamento por chapa e **🖨 Exportar PDF**.
 
-> Dica: rode **✨ Otimizar** nos projetos antes — peças com a mesma largura formam
-> colunas cheias e desperdiçam menos chapa.
+> Dica: rode **🛠 Ferramentas → Otimizar** nos projetos antes — peças com a mesma
+> largura formam colunas cheias e desperdiçam menos chapa.
 
 ### Atalhos de teclado (editor)
+
+Ferramentas de desenho (tecla única):
 
 | Tecla | Ação |
 |-------|------|
@@ -150,6 +172,21 @@ PORT=8080 node server.js  # ou em outra porta
 | `Esc` | Desmarcar |
 | Roda do mouse | Zoom |
 | Botão do meio / `Espaço`+arrastar | Mover a tela (pan) |
+
+Menus (`⌥⌘` no macOS · `Ctrl+Alt` no Windows/Linux):
+
+| Atalho | Ação |
+|--------|------|
+| `⌥⌘N` | Novo projeto |
+| `⌥⌘O` | Abrir projeto (.json) |
+| `⌥⌘D` | Duplicar projeto |
+| `⌥⌘S` | Exportar projeto (.json) |
+| `⌥⌘W` | Nova janela |
+| `⌥⌘F` | Fechar (voltar à lista) |
+| `⌥⌘T` | Otimizar medidas |
+| `⌥⌘E` | Esquemático |
+| `⌥⌘P` | Plano de corte |
+| `⌥⌘Z` / `⌥⌘0` / `⌥⌘G` | Zoom 100% / Preencher / Centralizar |
 
 ---
 

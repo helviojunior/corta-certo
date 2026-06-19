@@ -21,6 +21,7 @@ const state = {
   nextLabel: 1,
   crop: null,            // {x,y,w,h} em coords de imagem (seleção de recorte pendente)
   snapHalf: false,       // arredondar medidas para 0,5 cm
+  showPieces: true,      // exibir as peças sobre o desenho
   projectId: null,       // UUID do projeto (rota /p/<uuid>)
   projectName: '',       // nome do projeto
 };
@@ -108,6 +109,42 @@ function fitView() {
   state.view.y = (r.height - state.image.naturalHeight * s) / 2;
 }
 
+// ---------- Menu Janela (visualização) ----------
+// área de conteúdo: a imagem inteira ou, sem imagem, a caixa das peças
+function contentBox() {
+  if (state.image) return { x: 0, y: 0, w: state.image.naturalWidth, h: state.image.naturalHeight };
+  const bb = boundingBox();
+  return bb ? { x: bb.minX, y: bb.minY, w: bb.w, h: bb.h } : null;
+}
+// Zoom 100% (1:1), mantendo o centro atual da viewport
+function zoomActual() {
+  const r = canvas.getBoundingClientRect();
+  const cx = r.width / 2, cy = r.height / 2;
+  const ix = (cx - state.view.x) / state.view.scale, iy = (cy - state.view.y) / state.view.scale;
+  state.view.scale = 1;
+  state.view.x = cx - ix; state.view.y = cy - iy;
+  render();
+}
+// Preencher: ajusta o zoom para caber o conteúdo na tela
+function viewFill() {
+  if (state.image) { fitView(); render(); return; }
+  const b = contentBox(); if (!b) return;
+  const r = canvas.getBoundingClientRect();
+  const s = Math.min(r.width / b.w, r.height / b.h) * 0.92;
+  state.view.scale = s;
+  state.view.x = (r.width - b.w * s) / 2 - b.x * s;
+  state.view.y = (r.height - b.h * s) / 2 - b.y * s;
+  render();
+}
+// Centralizar: centraliza o conteúdo sem alterar o zoom
+function viewCenter() {
+  const b = contentBox(); if (!b) return;
+  const r = canvas.getBoundingClientRect(), s = state.view.scale;
+  state.view.x = (r.width - b.w * s) / 2 - b.x * s;
+  state.view.y = (r.height - b.h * s) / 2 - b.y * s;
+  render();
+}
+
 // ---------- Render do editor ----------
 const HANDLE = 8; // px tela
 function render() {
@@ -126,6 +163,7 @@ function render() {
   }
 
   // peças
+  if (state.showPieces)
   for (const p of state.pieces) {
     const a = toScreen(p.x, p.y);
     const w = p.w * state.view.scale, h = p.h * state.view.scale;
@@ -251,7 +289,8 @@ canvas.addEventListener('mousedown', e => {
     drag = { mode: 'create', x0: img.x, y0: img.y, x1: img.x, y1: img.y };
     return;
   }
-  // select
+  // select — com peças ocultas não há o que selecionar/mover no desenho
+  if (!state.showPieces) { selectPiece(null); return; }
   const sel = getPiece(state.selectedId);
   if (sel) {
     const handle = hitHandle(sel, sx, sy);
@@ -299,14 +338,8 @@ window.addEventListener('mouseup', e => {
     // mantém a ferramenta "Peça" ativa para desenhar várias peças em sequência
   } else if (drag.mode === 'calibrate') {
     const len = Math.hypot(drag.x1 - drag.x0, drag.y1 - drag.y0);
-    if (len > 4) {
-      const cm = parseFloat(prompt('Tamanho real desta linha (cm):', '10'));
-      if (cm > 0) {
-        state.pxPerCm = len / cm;
-        state.refLine = { x1: drag.x0, y1: drag.y0, x2: drag.x1, y2: drag.y1, cm };
-        updateScaleInfo(); renderPieceList(); syncProps(); scheduleSave();
-      }
-    }
+    const seg = { x1: drag.x0, y1: drag.y0, x2: drag.x1, y2: drag.y1 };
+    if (len > 4) askCalibration(len, seg);
     setTool('select');
   } else if (drag.mode === 'crop') {
     const x = Math.min(drag.x0, drag.x1), y = Math.min(drag.y0, drag.y1);
@@ -321,6 +354,16 @@ window.addEventListener('mouseup', e => {
   }
   drag = null; render();
 });
+
+async function askCalibration(len, seg) {
+  const ans = await uiPrompt('Tamanho real desta linha (cm):', { title: 'Calibrar escala', default: '10' });
+  if (ans == null) return;
+  const cm = parseFloat(String(ans).replace(',', '.'));
+  if (!(cm > 0)) { uiAlert('Informe um valor maior que zero.'); return; }
+  state.pxPerCm = len / cm;
+  state.refLine = { ...seg, cm };
+  updateScaleInfo(); renderPieceList(); syncProps(); scheduleSave();
+}
 
 function applyResize(d, img) {
   const p = d.p, s = d.start;
@@ -358,6 +401,7 @@ canvas.addEventListener('wheel', e => {
 let spaceDown = false;
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
+  if (e.metaKey || e.ctrlKey) return;   // combos ⌘/Ctrl são tratados pelos atalhos de menu
   if (e.code === 'Space') { spaceDown = true; canvas.style.cursor = 'grab'; }
   if (e.key === 'v' || e.key === 'V') setTool('select');
   if (e.key === 'r' || e.key === 'R') setTool('rect');
@@ -398,9 +442,11 @@ function deleteSelected() {
   scheduleSave();
 }
 
-function deleteAllPieces() {
+async function deleteAllPieces() {
   if (!state.pieces.length) return;
-  if (!confirm(`Excluir todas as ${state.pieces.length} peça(s)? Esta ação não pode ser desfeita.`)) return;
+  const ok = await uiConfirm(`Excluir todas as ${state.pieces.length} peça(s)? Esta ação não pode ser desfeita.`,
+    { title: 'Excluir peças', okLabel: 'Excluir', danger: true });
+  if (!ok) return;
   state.pieces = [];
   state.nextId = 1; state.nextLabel = 1;
   selectPiece(null); renderPieceList();
@@ -410,6 +456,20 @@ function deleteAllPieces() {
 function selectPiece(id) {
   state.selectedId = id;
   renderPieceList(); render(); syncProps();
+}
+
+// alterna a exibição das peças sobre o desenho (apenas visual, não altera os dados)
+function togglePieces() {
+  state.showPieces = !state.showPieces;
+  updateToggleBtn();
+  render();
+}
+function updateToggleBtn() {
+  const btn = document.getElementById('btnTogglePieces');
+  if (!btn) return;
+  btn.textContent = state.showPieces ? '👁 Ocultar' : '🚫 Ver';
+  btn.classList.toggle('active', !state.showPieces);
+  btn.title = state.showPieces ? 'Ocultar as peças no desenho' : 'Mostrar as peças no desenho';
 }
 
 // ---------- Camadas (z-order) ----------
@@ -589,7 +649,7 @@ function updateScaleInfo() {
 function setTool(t) {
   if (t !== 'crop') cancelCrop();
   state.tool = t;
-  document.querySelectorAll('.tool').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+  document.querySelectorAll('.tool[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
   canvas.style.cursor = t === 'select' ? 'default' : 'crosshair';
   statusEl.textContent = {
     select: 'Selecionar / mover / redimensionar',
@@ -598,7 +658,7 @@ function setTool(t) {
     crop: 'Arraste para selecionar a área e clique em Aplicar recorte',
   }[t];
 }
-document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+document.querySelectorAll('.tool[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
 
 // ---------- Imagem ----------
 document.getElementById('imageInput').addEventListener('change', e => {
@@ -614,10 +674,10 @@ function handleFile(file) {
     reader.readAsDataURL(file);
   } else if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
     const reader = new FileReader();
-    reader.onload = () => { try { loadProject(JSON.parse(reader.result), { save: true }); } catch (err) { alert('Arquivo inválido: ' + err.message); } };
+    reader.onload = () => { try { loadProject(JSON.parse(reader.result), { save: true }); } catch (err) { uiAlert('Arquivo inválido: ' + err.message); } };
     reader.readAsText(file);
   } else {
-    alert('Tipo de arquivo não suportado: ' + (file.type || file.name));
+    uiAlert('Tipo de arquivo não suportado: ' + (file.type || file.name));
   }
 }
 
@@ -628,10 +688,11 @@ function loadImage(dataUrl, name, opts = {}) {
     emptyHint.style.display = 'none';
     fitView(); render();
     statusEl.textContent = `${img.naturalWidth}×${img.naturalHeight}px`;
+    updateImageMenuLabel();
     suppressSave = false;
     if (opts.save !== false) scheduleSave();
   };
-  img.onerror = () => alert('Não foi possível carregar a imagem.');
+  img.onerror = () => uiAlert('Não foi possível carregar a imagem.');
   img.src = dataUrl;
 }
 
@@ -659,8 +720,6 @@ window.addEventListener('paste', e => {
   }
 });
 
-// --- Clicar na área vazia abre o seletor de imagem ---
-stageEl.addEventListener('click', () => { if (!state.image) document.getElementById('imageInput').click(); });
 
 // ---------- Serialização ----------
 function serializeProject() {
@@ -723,18 +782,18 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ---------- Salvar / Abrir (exportar/importar .json) ----------
-document.getElementById('btnSaveJson').addEventListener('click', () => {
+function exportProject() {
   const blob = new Blob([JSON.stringify(serializeProject(), null, 2)], { type: 'application/json' });
   const base = state.projectName || state.imageName.replace(/\.[^.]+$/, '') || 'projeto';
   download(blob, base + '-pecas.json');
-});
+}
 
 document.getElementById('loadInput').addEventListener('change', e => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     try { loadProject(JSON.parse(reader.result), { save: true }); }
-    catch (err) { alert('Arquivo inválido: ' + err.message); }
+    catch (err) { uiAlert('Arquivo inválido: ' + err.message); }
   };
   reader.readAsText(file);
 });
@@ -767,11 +826,11 @@ function download(blob, filename) {
 
 // ---------- Esquemático ----------
 const modal = document.getElementById('schematicModal');
-document.getElementById('btnSchematic').addEventListener('click', () => {
-  if (!state.pieces.length) { alert('Desenhe ao menos uma peça primeiro.'); return; }
+function openSchematic() {
+  if (!state.pieces.length) { uiAlert('Desenhe ao menos uma peça primeiro.'); return; }
   modal.hidden = false;
   drawSchematic();
-});
+}
 document.getElementById('btnCloseModal').addEventListener('click', () => modal.hidden = true);
 modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
 document.getElementById('btnExportPng').addEventListener('click', () => {
@@ -821,12 +880,12 @@ function pieceColor(hex) {
 // Renderiza no tema 'print' (fundo branco, imagem 50%) e abre o diálogo de
 // impressão do navegador — o usuário escolhe "Salvar como PDF". Sem dependências.
 function exportPdf() {
-  if (!state.pieces.length) { alert('Desenhe ao menos uma peça primeiro.'); return; }
+  if (!state.pieces.length) { uiAlert('Desenhe ao menos uma peça primeiro.'); return; }
   const cv = document.createElement('canvas');
   drawSchematic('print', cv);
   const url = cv.toDataURL('image/png');
   const win = window.open('', '_blank');
-  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  if (!win) { uiAlert('Permita pop-ups para exportar o PDF.'); return; }
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
     <title>Esquemático — ${state.projectName || state.imageName || 'peças'}</title>
     <style>
@@ -1007,14 +1066,15 @@ function clusterValues(values, tol) {
   return map;
 }
 
-function optimizePieces() {
+async function optimizePieces() {
   const dims = state.pieces.map(p => ({ p, d: pieceDims(p) })).filter(x => x.d.w != null && x.d.h != null);
-  if (!dims.length) { alert('Nenhuma peça com medida definida. Calibre a escala ou use medidas manuais.'); return; }
+  if (!dims.length) { uiAlert('Nenhuma peça com medida definida. Calibre a escala ou use medidas manuais.'); return; }
 
-  const ans = prompt('Otimizar medidas — tolerância máxima em cm.\nPeças com largura/altura dentro dessa diferença passam a ter a mesma medida.', '1');
+  const ans = await uiPrompt('Tolerância máxima em cm. Peças com largura/altura dentro dessa diferença passam a ter a mesma medida.',
+    { title: 'Otimizar medidas', default: '1' });
   if (ans == null) return;
   const tol = parseFloat(String(ans).replace(',', '.'));
-  if (!(tol >= 0)) { alert('Tolerância inválida.'); return; }
+  if (!(tol >= 0)) { uiAlert('Tolerância inválida.'); return; }
 
   const wMap = clusterValues(dims.map(x => x.d.w), tol);
   const hMap = clusterValues(dims.map(x => x.d.h), tol);
@@ -1034,7 +1094,7 @@ function optimizePieces() {
 
   const wSizes = new Set(Object.values(wMap)).size, hSizes = new Set(Object.values(hMap)).size;
   render(); renderPieceList(); syncProps(); scheduleSave();
-  alert(`Otimização concluída.\n${changed} peça(s) ajustada(s).\nLarguras distintas: ${wSizes} · Alturas distintas: ${hSizes}.`);
+  uiAlert(`${changed} peça(s) ajustada(s).\nLarguras distintas: ${wSizes} · Alturas distintas: ${hSizes}.`, { title: 'Otimização concluída' });
 }
 
 // ---------- Projeto / Init ----------
@@ -1058,14 +1118,99 @@ async function initProject() {
     if (proj.data) loadProject(proj.data, { save: false });
     setSaveStatus('saved');
   } catch {
-    alert('Projeto não encontrado.');
+    await uiAlert('Projeto não encontrado.');
     location.href = '/';
   }
 }
 
+// ---------- Barra de menus ----------
+async function newProject() {
+  const name = await uiPrompt('Nome do novo projeto:', { title: 'Novo projeto', default: 'Novo projeto' });
+  if (name === null) return;
+  try {
+    const r = await fetch('/api/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name || 'Novo projeto' }),
+    });
+    const proj = await r.json();
+    location.href = `/p/${proj.id}`;
+  } catch { uiAlert('Não foi possível criar o projeto.'); }
+}
+
+async function duplicateProject() {
+  const suggested = (state.projectName || 'Projeto') + ' (cópia)';
+  const name = await uiPrompt('Nome do novo projeto:', { title: 'Duplicar projeto', default: suggested });
+  if (name === null) return;
+  try {
+    const data = serializeProject();
+    const r = await fetch('/api/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name || suggested, data }),
+    });
+    const proj = await r.json();
+    location.href = `/p/${proj.id}`;
+  } catch { uiAlert('Não foi possível duplicar o projeto.'); }
+}
+
+// alterna o rótulo do item de imagem: "Carregar imagem" (sem imagem) / "Nova imagem" (já existe)
+function updateImageMenuLabel() {
+  const lbl = document.querySelector('#miImage .mi-lbl');
+  if (lbl) lbl.textContent = state.image ? 'Nova imagem' : 'Carregar imagem';
+}
+
+function initMenubar() {
+  applyShortcutLabels();
+  updateImageMenuLabel();
+  setupMenubar();
+
+  // ações dos itens
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  on('miNew', newProject);
+  on('miOpen', () => document.getElementById('loadInput').click());
+  on('miDuplicate', duplicateProject);
+  on('miImage', () => document.getElementById('imageInput').click());
+  on('miCrop', () => setTool('crop'));
+  on('miCalibrate', () => setTool('calibrate'));
+  on('miNewWindow', () => window.open('/', '_blank'));
+  on('miExport', exportProject);
+  on('miOptimize', optimizePieces);
+  on('miSchematic', openSchematic);
+  on('miCutplan', () => { location.href = '/corte'; });
+  on('miClose', () => { location.href = '/'; });
+  on('miZoom', zoomActual);
+  on('miFill', viewFill);
+  on('miCenter', viewCenter);
+  on('miAbout', showAbout);
+}
+
+// Atalhos de teclado: base ⌘⌥ (Mac) / Ctrl+Alt (Win/Linux). Esses combos não são
+// reservados pelo navegador e chegam à página, então o preventDefault funciona.
+// Casamos por e.code (tecla física), imune ao ⌥ gerar caracteres especiais no Mac.
+const SHORTCUTS = {
+  KeyN: () => newProject(),
+  KeyO: () => document.getElementById('loadInput').click(),
+  KeyD: () => duplicateProject(),
+  KeyW: () => window.open('/', '_blank'),
+  KeyS: () => exportProject(),
+  KeyF: () => { location.href = '/'; },
+  KeyT: () => optimizePieces(),
+  KeyE: () => openSchematic(),
+  KeyP: () => { location.href = '/corte'; },
+  KeyZ: () => zoomActual(),
+  Digit0: () => viewFill(),
+  KeyG: () => viewCenter(),
+};
+window.addEventListener('keydown', e => {
+  if (!(e.metaKey || e.ctrlKey) || !e.altKey || e.shiftKey) return;
+  const fn = SHORTCUTS[e.code];
+  if (fn) { e.preventDefault(); fn(); }
+});
+
 window.addEventListener('resize', resizeCanvas);
-document.getElementById('btnOptimize').addEventListener('click', optimizePieces);
 document.getElementById('btnDeleteAll').addEventListener('click', deleteAllPieces);
+document.getElementById('btnTogglePieces').addEventListener('click', togglePieces);
+initMenubar();
+populateRecent(state.projectId);
 bindProps();
 setTool('select');
 resizeCanvas();

@@ -38,31 +38,86 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
 /* Topbar */
 .topbar {
-  display: flex; align-items: center; gap: 16px;
+  display: flex; align-items: center; gap: 12px;
   padding: 8px 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   flex: none;
 }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; white-space: nowrap; flex: none; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-name { font-size: 16px; font-weight: 700; }
+.brand-sub { display: flex; align-items: baseline; gap: 6px; font-size: 11px; font-weight: 400; }
 .brand small { color: var(--muted); font-weight: 400; }
-.logo { font-size: 20px; }
+.brand-ver { color: var(--accent); font-weight: 600; }
+.logo { font-size: 22px; }
 
 .brand-link { text-decoration: none; color: inherit; }
 .brand-link:hover { color: var(--accent); }
 
-.toolbar { display: flex; align-items: center; gap: 8px; width: 100%; }
+.toolbar { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
 .spacer { flex: 1; }
+/* divisor vertical entre grupos de botões */
+.tb-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; flex: none; }
 
 /* Barra do projeto (editor) */
-.project-bar { display: flex; align-items: center; gap: 10px; flex: none; }
+.project-bar { display: flex; align-items: center; gap: 8px; flex: none; min-width: 0; }
 .proj-name {
   background: var(--bg); border: 1px solid var(--border); color: var(--text);
   border-radius: 8px; padding: 7px 10px; font-size: 14px; font-weight: 600;
-  min-width: 220px;
+  width: 180px; min-width: 90px;
 }
 .proj-name:focus { outline: none; border-color: var(--accent); }
-.save-status { font-size: 12px; white-space: nowrap; min-width: 80px; }
+.save-status { font-size: 12px; white-space: nowrap; }
+
+/* Barra de menus (estilo desktop) */
+.menubar { display: flex; align-items: stretch; gap: 2px; flex: none; }
+.menu { position: relative; display: flex; }
+.menu-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; color: var(--text); border: 1px solid transparent;
+  border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px;
+  font-family: inherit; white-space: nowrap; user-select: none;
+}
+.menu-btn:hover { background: var(--panel-2); }
+.menu.open > .menu-btn { background: var(--panel-2); border-color: var(--border); }
+.menu.disabled > .menu-btn { color: var(--muted); opacity: .5; cursor: default; }
+.menu.disabled > .menu-btn:hover { background: transparent; }
+
+.menu-pop {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 80;
+  min-width: 230px; margin: 0; padding: 6px; list-style: none;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5); display: none;
+}
+.menu.open > .menu-pop { display: block; animation: dlg-in .1s ease-out; }
+
+.menu-item {
+  display: flex; align-items: center; gap: 10px; position: relative;
+  padding: 7px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; white-space: nowrap;
+}
+.menu-item:hover { background: var(--panel-2); }
+.menu-item.muted, .menu-item.disabled { color: var(--muted); cursor: default; }
+.menu-item.muted:hover, .menu-item.disabled:hover { background: transparent; }
+.mi-ico { width: 18px; text-align: center; flex: none; }
+.mi-lbl { flex: 1; }
+.mi-key { color: var(--muted); font-size: 12px; margin-left: 22px; letter-spacing: 1px; }
+.mi-arrow { color: var(--muted); margin-left: 16px; }
+.menu-sep { height: 1px; background: var(--border); margin: 6px 4px; padding: 0; }
+
+/* submenu (Abrir recente) */
+.menu-item.has-sub > .submenu { top: -7px; left: calc(100% + 5px); }
+.menu-item.has-sub:hover > .submenu { display: block; }
+
+/* Em telas estreitas, mostra só os ícones dos botões da toolbar para não estourar */
+@media (max-width: 1180px) {
+  .toolbar .btn .btn-txt { display: none; }
+  .toolbar .btn { padding: 7px 9px; }
+}
+@media (max-width: 920px) {
+  .brand-sub { display: none; }
+  .proj-name { width: 130px; }
+}
 
 /* Página de projetos */
 .projects-page { overflow: auto; }
@@ -147,6 +202,8 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .btn.full { width: 100%; justify-content: center; margin-top: 10px; }
 .btn-sm { padding: 3px 8px; font-size: 11px; }
 .panel h2 .btn-sm { margin-left: auto; }
+.panel h2 .btn-sm ~ .btn-sm { margin-left: 0; }
+.btn.active { background: var(--accent); color: #1a1205; font-weight: 600; border-color: var(--accent); }
 
 .tools { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
 .tool {
@@ -236,3 +293,26 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .modal-actions { display: flex; gap: 8px; }
 .modal-body { flex: 1; overflow: auto; background: #0a0c0f; display: flex; align-items: flex-start; justify-content: center; padding: 12px; }
 #schematic { background: #111317; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
+
+/* Diálogos customizados (uiAlert / uiConfirm / uiPrompt) */
+.modal.dialog { z-index: 100; }
+.dialog-box {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  width: min(440px, 94vw); max-height: 90vh; overflow: auto;
+  padding: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  animation: dlg-in .12s ease-out;
+}
+@keyframes dlg-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.dialog-title { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.dialog-msg { margin: 0; color: var(--text); font-size: 14px; line-height: 1.5; white-space: pre-line; }
+.dialog-msg a { color: var(--accent); text-decoration: none; }
+.dialog-msg a:hover { text-decoration: underline; }
+.dlg-row { display: flex; gap: 10px; align-items: baseline; white-space: normal; margin-top: 4px; }
+.dlg-k { color: var(--muted); min-width: 60px; flex: none; }
+.dialog-input { width: 100%; margin-top: 14px; min-width: 0; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.dialog-actions .btn { padding: 8px 16px; }
+.dialog-ok { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.dialog-ok:hover { background: rgba(245,158,11,.12); }
+.dialog-ok.danger { border-color: #5a2a2a; color: #ffb4b4; }
+.dialog-ok.danger:hover { background: #3a1f1f; }

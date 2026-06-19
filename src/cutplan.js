@@ -207,8 +207,8 @@ function generate() {
   const kerf = +$('kerf').value || 0;
   const rot = $('allowRotate').checked;
   const items = collectSelected();
-  if (!W || !H) { alert('Informe o tamanho da chapa.'); return; }
-  if (!items.length) { alert('Selecione ao menos uma peça.'); return; }
+  if (!W || !H) { uiAlert('Informe o tamanho da chapa.'); return; }
+  if (!items.length) { uiAlert('Selecione ao menos uma peça.'); return; }
 
   const { bins, skipped } = packAll(items, W, H, kerf, rot);
   lastPlan = { W, H, kerf, rot, bins, skipped, items };
@@ -346,7 +346,7 @@ function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp
 function exportPdf() {
   if (!lastPlan || !lastPlan.bins.length) return;
   const win = window.open('', '_blank');
-  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  if (!win) { uiAlert('Permita pop-ups para exportar o PDF.'); return; }
   const css = `
     @page { size: A4 portrait; margin: 10mm; }
     * { box-sizing: border-box; }
