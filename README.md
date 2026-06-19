@@ -1,5 +1,7 @@
 # 🪵 CortaCerto
 
+![CortaCerto — editor de peças](docs/screenshots/principal.png)
+
 **CortaCerto** é um web app **auto-hospedado** (Docker) para marcenaria: você mapeia
 o tamanho das peças sobre uma **foto de referência**, organiza tudo em **projetos**
 salvos localmente e gera um **plano de corte otimizado** das chapas de madeira —
