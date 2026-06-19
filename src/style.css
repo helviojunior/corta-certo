@@ -264,7 +264,7 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .field-grid .col2 { grid-column: span 2; }
 .field-grid input { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; min-width: 0; }
 .field-grid input[type="color"] { padding: 2px; height: 32px; }
-.manual-toggle { flex-direction: row !important; align-items: center; gap: 6px; }
+.manual-toggle { display: flex; flex-direction: row !important; align-items: center; gap: 6px; }
 
 .scale-row { margin-bottom: 10px; }
 

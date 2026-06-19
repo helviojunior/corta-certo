@@ -1018,9 +1018,12 @@ function drawSchematic(themeName = 'screen', targetCanvas) {
     drawPieceCard(g, p, cx, cy, cellW, cellH, colorName(p));
   });
 
-  // rodapé (notas)
+  // rodapé (nome do software, versão e URL + nota de medidas)
+  const appName = (typeof APP_NAME !== 'undefined') ? APP_NAME : 'CortaCerto';
+  const appVer = (typeof APP_VERSION !== 'undefined') ? ' v' + APP_VERSION : '';
+  const appUrl = (typeof APP_URL !== 'undefined') ? APP_URL : '';
   g.fillStyle = theme.footer; g.font = '500 14px system-ui'; g.textAlign = 'left';
-  g.fillText('Gerado com CortaCerto · medidas em cm', 40, H - 20);
+  g.fillText(`${appName}${appVer} · ${appUrl} · medidas em cm`, 40, H - 20);
 }
 
 function drawPieceCard(g, p, x, y, w, h, suffix) {

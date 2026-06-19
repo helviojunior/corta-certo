@@ -38,6 +38,47 @@ function applyPreset() {
   if (p && p.w) { $('sheetW').value = p.w; $('sheetH').value = p.h; }
 }
 
+// ---------- Cache do último tamanho usado (persistido em ./data) ----------
+const PREF_IDS = ['sheetPreset', 'sheetW', 'sheetH', 'kerf', 'allowRotate', 'mixedCols'];
+
+async function loadPrefs() {
+  let prefs = {};
+  try { prefs = await (await fetch('/api/prefs/cutplan')).json(); } catch {}
+  if (prefs.preset != null && $('sheetPreset').querySelector(`option[value="${prefs.preset}"]`)) $('sheetPreset').value = prefs.preset;
+  applyPreset();   // aplica o preset; depois sobrescreve com os valores salvos
+  if (prefs.sheetW) $('sheetW').value = prefs.sheetW;
+  if (prefs.sheetH) $('sheetH').value = prefs.sheetH;
+  if (prefs.kerf != null) $('kerf').value = prefs.kerf;
+  if (prefs.allowRotate != null) $('allowRotate').checked = !!prefs.allowRotate;
+  if (prefs.mixedCols != null) $('mixedCols').checked = !!prefs.mixedCols;
+}
+
+let prefTimer = null;
+function savePrefs() {
+  clearTimeout(prefTimer);
+  prefTimer = setTimeout(() => {
+    const body = {
+      preset: $('sheetPreset').value,
+      sheetW: +$('sheetW').value || null,
+      sheetH: +$('sheetH').value || null,
+      kerf: +$('kerf').value || 0,
+      allowRotate: $('allowRotate').checked,
+      mixedCols: $('mixedCols').checked,
+    };
+    fetch('/api/prefs/cutplan', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).catch(() => {});
+  }, 400);
+}
+
+function bindPrefs() {
+  for (const id of PREF_IDS) {
+    const el = $(id); if (!el) continue;
+    el.addEventListener('change', savePrefs);
+    if (el.tagName === 'INPUT' && el.type === 'number') el.addEventListener('input', savePrefs);
+  }
+}
+
 // ---------- Carregar projetos e montar a árvore de seleção ----------
 async function loadProjects() {
   let list = [];
@@ -201,17 +242,92 @@ function addColumn(bin, col, kerf) {
   bin.cutLen += bin.H + Math.max(0, col.items.length - 1) * col.w;
 }
 
+// ---------- Empacotamento guilhotinado livre (colunas de larguras diferentes) ----------
+// Coloca cada peça no melhor retângulo livre (best short-side fit) e divide a
+// sobra em dois retângulos por um corte guilhotinado. Mistura larguras numa
+// mesma faixa, reaproveitando melhor a chapa (à custa de mais cortes).
+function packGuillotine(items, W, H, kerf, rot) {
+  const fits = [], skipped = [];
+  for (const it of items) {
+    const a = it.w <= W && it.h <= H;
+    const b = rot && it.h <= W && it.w <= H;
+    if (a || b) fits.push(it); else skipped.push(it);
+  }
+  // maiores primeiro (pelo maior lado, depois área)
+  fits.sort((p, q) => Math.max(q.w, q.h) - Math.max(p.w, p.h) || (q.w * q.h - p.w * p.h));
+
+  const bins = [];
+  const newBin = () => ({ W, H, x: 0, placed: [], free: [{ x: 0, y: 0, w: W, h: H }], cuts: 0, cutLen: 0 });
+
+  for (const it of fits) {
+    let best = null;
+    for (const bin of bins) {
+      const c = bestFreeFit(bin, it, rot);
+      if (c && (!best || c.score < best.score)) best = { bin, ...c };
+    }
+    if (!best) {
+      const bin = newBin();
+      const c = bestFreeFit(bin, it, rot);
+      if (!c) { skipped.push(it); continue; }
+      bins.push(bin);
+      best = { bin, ...c };
+    }
+    placeGuillotine(best.bin, best.fi, it, best.w, best.h, best.rot, kerf);
+  }
+  for (const bin of bins) {
+    bin.cuts = bin.placed.length * 2;   // estimativa: ~1 corte horizontal + 1 vertical por peça
+    bin.cutLen = Math.round(bin.placed.reduce((s, p) => s + p.w + p.h, 0));
+  }
+  return { bins, skipped };
+}
+
+// melhor retângulo livre p/ a peça (best short-side fit), considerando rotação
+function bestFreeFit(bin, it, rot) {
+  const opts = [{ w: it.w, h: it.h, rot: false }];
+  if (rot && it.w !== it.h) opts.push({ w: it.h, h: it.w, rot: true });
+  let best = null;
+  for (let i = 0; i < bin.free.length; i++) {
+    const f = bin.free[i];
+    for (const o of opts) {
+      if (o.w <= f.w + 1e-6 && o.h <= f.h + 1e-6) {
+        const score = Math.min(f.w - o.w, f.h - o.h);   // sobra mínima → encaixe mais justo
+        if (!best || score < best.score) best = { fi: i, w: o.w, h: o.h, rot: o.rot, score };
+      }
+    }
+  }
+  return best;
+}
+
+// coloca a peça no canto sup-esq do retângulo livre `fi` e divide a sobra (guilhotina)
+function placeGuillotine(bin, fi, it, pw, ph, rotated, kerf) {
+  const f = bin.free[fi];
+  const x = f.x, y = f.y;
+  bin.placed.push({ x, y, w: pw, h: ph, rot: rotated, meta: it });
+  bin.free.splice(fi, 1);
+  const rw = f.w - pw - kerf;   // sobra à direita (após o kerf)
+  const rh = f.h - ph - kerf;   // sobra abaixo (após o kerf)
+  // Corte VERTICAL: a sobra da direita mantém a ALTURA CHEIA (vira uma nova coluna
+  // reutilizável) e a sobra de baixo continua a coluna atual com a largura da peça.
+  // Assim as peças se empilham em colunas e o refugo fica consolidado à direita,
+  // em vez de uma faixa horizontal fina com um vão grande embaixo.
+  const right  = { x: x + pw + kerf, y,                w: rw, h: f.h };
+  const bottom = { x,                y: y + ph + kerf, w: pw, h: rh };
+  if (right.w > 1 && right.h > 1) bin.free.push(right);
+  if (bottom.w > 1 && bottom.h > 1) bin.free.push(bottom);
+}
+
 // ---------- Gerar ----------
 function generate() {
   const W = +$('sheetW').value, H = +$('sheetH').value;
   const kerf = +$('kerf').value || 0;
   const rot = $('allowRotate').checked;
+  const mixed = $('mixedCols').checked;
   const items = collectSelected();
   if (!W || !H) { uiAlert('Informe o tamanho da chapa.'); return; }
   if (!items.length) { uiAlert('Selecione ao menos uma peça.'); return; }
 
-  const { bins, skipped } = packAll(items, W, H, kerf, rot);
-  lastPlan = { W, H, kerf, rot, bins, skipped, items };
+  const { bins, skipped } = mixed ? packGuillotine(items, W, H, kerf, rot) : packAll(items, W, H, kerf, rot);
+  lastPlan = { W, H, kerf, rot, mixed, bins, skipped, items };
   renderReport(lastPlan);
   $('btnExportPdf').disabled = bins.length === 0;
 }
@@ -371,10 +487,16 @@ function exportPdf() {
     .sheet-cap { font-size: 12px; color: #555; margin-bottom: 6px; }
     .svg-sheet { width: 100%; height: auto; max-height: 230mm; }
     small { color: #999; }
+    .print-footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid #ccc;
+      font-size: 11px; color: #666; text-align: left; }
   `;
+  const appName = (typeof APP_NAME !== 'undefined') ? APP_NAME : 'CortaCerto';
+  const appVer = (typeof APP_VERSION !== 'undefined') ? 'v' + APP_VERSION : '';
+  const appUrl = (typeof APP_URL !== 'undefined') ? APP_URL : '';
+  const footer = `<footer class="print-footer">${appName} ${appVer} · ${appUrl}</footer>`;
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Plano de corte</title><style>${css}</style></head>
-    <body>${$('report').innerHTML}
+    <title>Plano de corte — ${appName} ${appVer}</title><style>${css}</style></head>
+    <body>${$('report').innerHTML}${footer}
     <script>window.onload=function(){window.focus();window.print();}<\/script>
     </body></html>`);
   win.document.close();
@@ -383,6 +505,8 @@ function exportPdf() {
 // ---------- Init ----------
 if (typeof document !== 'undefined') {
   initPresets();
+  loadPrefs();
+  bindPrefs();
   loadProjects();
   $('btnGenerate').addEventListener('click', generate);
   $('btnExportPdf').addEventListener('click', exportPdf);

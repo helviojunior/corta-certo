@@ -54,7 +54,10 @@ async function serveStatic(res, urlPath) {
   if (!file.startsWith(PUBLIC + path.sep)) return send(res, 403, 'Forbidden');
   try {
     const data = await fsp.readFile(file);
-    send(res, 200, data, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
+    send(res, 200, data, {
+      'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
+      'Cache-Control': 'no-cache',
+    });
   } catch {
     send(res, 404, 'Não encontrado');
   }
@@ -66,6 +69,7 @@ async function listProjects() {
   for (const f of files) {
     try {
       const j = JSON.parse(await fsp.readFile(path.join(DATA, f), 'utf8'));
+      if (!j || !j.id) continue;   // ignora arquivos que não são projetos (ex.: prefs-*.json)
       list.push({
         id: j.id, name: j.name,
         createdAt: j.createdAt, updatedAt: j.updatedAt,
@@ -162,6 +166,23 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'DELETE') {
         try { await fsp.unlink(file); } catch {}
+        return sendJson(res, 200, { ok: true });
+      }
+      return sendJson(res, 405, { error: 'método não permitido' });
+    }
+
+    // ----- API: preferências (cache simples em ./data/prefs-<key>.json) -----
+    const mpref = p.match(/^\/api\/prefs\/([a-z0-9_-]+)$/i);
+    if (mpref) {
+      const pf = path.join(DATA, `prefs-${mpref[1]}.json`);
+      if (req.method === 'GET') {
+        try { return send(res, 200, await fsp.readFile(pf), { 'Content-Type': 'application/json; charset=utf-8' }); }
+        catch { return sendJson(res, 200, {}); }
+      }
+      if (req.method === 'PUT') {
+        let payload;
+        try { payload = JSON.parse(await readBody(req)); } catch { return sendJson(res, 400, { error: 'JSON inválido' }); }
+        await fsp.writeFile(pf, JSON.stringify(payload, null, 2));
         return sendJson(res, 200, { ok: true });
       }
       return sendJson(res, 405, { error: 'método não permitido' });
