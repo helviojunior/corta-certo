@@ -771,23 +771,25 @@ function serializeProject() {
 let suppressSave = false;          // evita salvar durante o carregamento do projeto
 let saveTimer = null, saving = false, dirtyAgain = false;
 
+let readOnly = false;   // modo online: projeto de outro dono → não salva (somente leitura)
+
 function setSaveStatus(s) {
   const el = document.getElementById('saveStatus');
   if (!el) return;
-  const map = { saved: '✓ Salvo', saving: '⏳ Salvando…', dirty: '● Não salvo', error: '⚠ Erro ao salvar' };
+  const map = { saved: '✓ Salvo', saving: '⏳ Salvando…', dirty: '● Não salvo', error: '⚠ Erro ao salvar', readonly: '🔒 Somente leitura' };
   el.textContent = map[s] || '—';
-  el.style.color = s === 'error' ? '#ffb4b4' : (s === 'saved' ? '#84cc16' : '');
+  el.style.color = s === 'error' ? '#ffb4b4' : (s === 'saved' ? '#84cc16' : (s === 'readonly' ? '#f59e0b' : ''));
 }
 
 function scheduleSave() {
-  if (suppressSave || !state.projectId) return;
+  if (suppressSave || !state.projectId || readOnly) return;
   setSaveStatus('dirty');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, 700);
 }
 
 async function saveNow() {
-  if (!state.projectId) return;
+  if (!state.projectId || readOnly) return;
   if (saving) { dirtyAgain = true; return; }
   saving = true; setSaveStatus('saving');
   try {
@@ -796,10 +798,11 @@ async function saveNow() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: state.projectName, data: serializeProject() }),
     });
-    setSaveStatus(r.ok ? 'saved' : 'error');
+    if (r.status === 403) { readOnly = true; setSaveStatus('readonly'); }
+    else setSaveStatus(r.ok ? 'saved' : 'error');
   } catch { setSaveStatus('error'); }
   saving = false;
-  if (dirtyAgain) { dirtyAgain = false; scheduleSave(); }
+  if (dirtyAgain && !readOnly) { dirtyAgain = false; scheduleSave(); }
 }
 
 // salva o que der ao sair (melhor esforço)
@@ -1216,7 +1219,7 @@ function initMenubar() {
   on('miZoom', zoomActual);
   on('miFill', viewFill);
   on('miCenter', viewCenter);
-  on('miAbout', showAbout);
+  on('miAbout', () => { location.href = '/sobre'; });
 }
 
 // Atalhos de teclado: base ⌘⌥ (Mac) / Ctrl+Alt (Win/Linux). Esses combos não são
@@ -1247,6 +1250,8 @@ document.getElementById('btnDeleteAll').addEventListener('click', deleteAllPiece
 document.getElementById('btnTogglePieces').addEventListener('click', togglePieces);
 initMenubar();
 populateRecent(state.projectId);
+// modo online: avisa que os projetos são temporários e públicos
+appConfig().then(cfg => { if (cfg && cfg.online) { const el = document.getElementById('onlineHint'); if (el) el.hidden = false; } });
 bindProps();
 setTool('select');
 resizeCanvas();

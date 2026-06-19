@@ -68,18 +68,6 @@ function setupMenubar(bar) {
   return { close: closeMenu };
 }
 
-function showAbout() {
-  const v = (typeof APP_VERSION !== 'undefined') ? 'v' + APP_VERSION : '';
-  const html = `<strong>CortaCerto</strong> — marcenaria ${v}<br><br>` +
-    `Mapeie peças sobre uma foto, gere o esquemático com medidas e o plano de corte de chapas.` +
-    `<br><br>` +
-    `<span class="dlg-row"><span class="dlg-k">Autor</span>` +
-    `<a href="https://github.com/helviojunior/" target="_blank" rel="noopener noreferrer">Helvio Junior</a></span>` +
-    `<span class="dlg-row"><span class="dlg-k">Projeto</span>` +
-    `<a href="https://github.com/helviojunior/corta-certo" target="_blank" rel="noopener noreferrer">github.com/helviojunior/corta-certo</a></span>`;
-  uiAlert('', { title: 'Sobre o CortaCerto', html });
-}
-
 // Preenche o submenu "Abrir recente". currentId destaca o projeto atual (editor).
 async function populateRecent(currentId) {
   const ul = document.getElementById('recentList');
@@ -112,9 +100,17 @@ async function populateRecent(currentId) {
   ul.appendChild(all);
 }
 
+// configuração do app (ex.: modo online), buscada uma vez do servidor
+let _cfg = null;
+async function appConfig() {
+  if (_cfg) return _cfg;
+  try { _cfg = await (await fetch('/api/config')).json(); } catch { _cfg = { online: false }; }
+  return _cfg;
+}
+
+window.appConfig = appConfig;
 window.IS_MAC = IS_MAC;
 window.formatShortcut = formatShortcut;
 window.applyShortcutLabels = applyShortcutLabels;
 window.setupMenubar = setupMenubar;
-window.showAbout = showAbout;
 window.populateRecent = populateRecent;

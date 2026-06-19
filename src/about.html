@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sobre — CortaCerto</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="projects-page">
+  <header class="topbar">
+    <a class="brand brand-link" href="/" title="Página inicial">
+      <span class="logo">🪵</span>
+      <span class="brand-text">
+        <span class="brand-name">CortaCerto</span>
+        <span class="brand-sub"><small>marcenaria</small> <span class="brand-ver app-version"></span></span>
+      </span>
+    </a>
+    <div class="toolbar">
+      <div class="spacer"></div>
+      <a class="btn" href="/" title="Voltar aos projetos">← Projetos</a>
+    </div>
+  </header>
+
+  <main class="about">
+    <h1 class="about-title">Sobre o CortaCerto <span class="about-ver app-version"></span></h1>
+    <p class="about-lead">
+      Ferramenta de marcenaria para <strong>mapear peças sobre uma foto</strong>, gerar o
+      <strong>esquemático</strong> com as medidas e um <strong>plano de corte</strong> de chapas —
+      tudo auto-hospedado, com os projetos salvos localmente.
+    </p>
+
+    <div class="about-links">
+      <div class="about-row"><span class="about-k">Autor</span>
+        <a href="https://github.com/helviojunior/" target="_blank" rel="noopener noreferrer">Helvio Junior</a></div>
+      <div class="about-row"><span class="about-k">Projeto</span>
+        <a href="https://github.com/helviojunior/corta-certo" target="_blank" rel="noopener noreferrer">github.com/helviojunior/corta-certo</a></div>
+    </div>
+
+    <!-- Aviso exibido apenas no modo público/online -->
+    <section id="onlineWarning" class="about-card about-card--warn" hidden>
+      <h2>🌐 Versão online (pública)</h2>
+      <ul>
+        <li>Os projetos ficam armazenados de forma <strong>temporária</strong> neste servidor —
+          podem ser apagados a qualquer momento. <strong>Exporte</strong> (menu <em>Projeto → Exportar</em>)
+          os projetos que quiser guardar.</li>
+        <li>Os projetos não são privados: ficam <strong>visíveis publicamente</strong> e qualquer pessoa
+          com o link (<code>/p/&lt;id&gt;</code>) pode <strong>visualizá-los</strong>. Não inclua
+          informações sensíveis.</li>
+      </ul>
+    </section>
+
+    <section class="about-card about-card--warn">
+      <h2>⚠️ Escopo e aviso</h2>
+      <p>
+        O <strong>CortaCerto não pretende ser um software de design ou uma ferramenta profissional</strong>
+        de marcenaria. Ele nasceu para <strong>bricolagem / DIY</strong> — uso doméstico e amador —
+        priorizando simplicidade e rapidez em vez de precisão milimétrica ou recursos de CAD/CAM.
+      </p>
+      <p>Por isso, trabalhe com uma <strong>tolerância maior</strong>:</p>
+      <ul>
+        <li>As medidas vêm de uma <strong>foto calibrada manualmente</strong>, então têm imprecisão
+          natural — confira sempre com uma trena antes de cortar.</li>
+        <li>O plano de corte e as estimativas (cortes, aproveitamento, comprimento) são
+          <strong>aproximações</strong> para planejar e estimar material, não um roteiro exato de produção.</li>
+        <li><strong>Sempre revise o resultado</strong> e adicione folgas/sobras à sua compra. Para projetos
+          críticos, profissionais ou em escala, use ferramentas dedicadas de CAD/nesting.</li>
+      </ul>
+      <p>Em resumo: é um <strong>ajudante de fim de semana</strong> para quem curte fazer móveis em casa. 🪵</p>
+    </section>
+  </main>
+
+  <script src="/version.js"></script>
+  <script src="/about.js"></script>
+</body>
+</html>

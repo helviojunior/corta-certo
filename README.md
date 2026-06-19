@@ -115,6 +115,25 @@ docker compose up -d --build  # aplicar atualizações do código
 ### Mudar a porta
 Edite `docker-compose.yml` (ex.: `"9000:80"`) e rode `docker compose up -d`.
 
+### Modo online / público (`ONLINE_MODE`)
+Para hospedar uma instância pública/compartilhada, ative o **modo online** via variável
+de ambiente. Copie `.env.example` para `.env` e defina:
+
+```env
+ONLINE_MODE=1
+```
+
+Com `ONLINE_MODE=1`:
+- Cada visitante recebe um **cookie de sessão**; a lista mostra **apenas os projetos
+  do dono do cookie**, e **editar/excluir exige ser o dono**.
+- **Visualizar por link** (`/p/<id>`) continua **aberto** — os projetos são **públicos**:
+  qualquer pessoa com o link pode vê-los.
+- O app exibe avisos de que os projetos são **temporários** (recomenda-se exportar) e
+  **visíveis publicamente** (na tela inicial, na instrução do editor e na página **Sobre**).
+
+No modo padrão (`ONLINE_MODE=0`, auto-hospedado) não há cookies nem filtragem: todos os
+projetos aparecem na lista.
+
 ### Sem Docker (desenvolvimento)
 Requer Node 18+:
 ```bash

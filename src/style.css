@@ -109,6 +109,35 @@ body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .menu-item.has-sub > .submenu { top: -7px; left: calc(100% + 5px); }
 .menu-item.has-sub:hover > .submenu { display: block; }
 
+/* Avisos do modo online/público */
+.online-notice {
+  background: rgba(245,158,11,.10); border: 1px solid #5a4520; color: #f3d9a8;
+  border-radius: 10px; padding: 10px 14px; margin: 0 0 18px; font-size: 13px; line-height: 1.5;
+}
+.online-notice a, .online-hint a { color: var(--accent); }
+.online-hint {
+  background: rgba(245,158,11,.10); border: 1px solid #5a4520; color: #f3d9a8;
+  border-radius: 8px; padding: 8px 12px; margin: 0 0 14px; font-size: 13px;
+}
+
+/* Página Sobre */
+.about { max-width: 820px; margin: 0 auto; padding: 28px 20px 60px; width: 100%; }
+.about-title { font-size: 24px; margin: 6px 0 14px; }
+.about-ver { color: var(--accent); font-size: 16px; font-weight: 600; }
+.about-lead { color: var(--text); font-size: 15px; line-height: 1.6; margin: 0 0 18px; }
+.about-links { display: flex; flex-direction: column; gap: 6px; margin: 0 0 22px; }
+.about-row { display: flex; gap: 10px; align-items: baseline; }
+.about-k { color: var(--muted); min-width: 70px; flex: none; }
+.about-row a { color: var(--accent); text-decoration: none; }
+.about-row a:hover { text-decoration: underline; }
+.about-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin: 0 0 18px; }
+.about-card h2 { margin: 0 0 10px; font-size: 17px; }
+.about-card p { line-height: 1.6; margin: 0 0 10px; }
+.about-card ul { margin: 0 0 10px; padding-left: 20px; line-height: 1.6; }
+.about-card li { margin: 4px 0; }
+.about-card code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-size: 12px; }
+.about-card--warn { border-color: #5a4520; background: rgba(245,158,11,.06); }
+
 /* Em telas estreitas, mostra só os ícones dos botões da toolbar para não estourar */
 @media (max-width: 1180px) {
   .toolbar .btn .btn-txt { display: none; }

@@ -77,6 +77,9 @@ const onMenu = (id, fn) => { const el = document.getElementById(id); if (el) el.
 onMenu('miNew', newProject);
 onMenu('miNewWindow', () => window.open('/', '_blank'));
 onMenu('miCutplan', () => { location.href = '/corte'; });
-onMenu('miAbout', showAbout);
+onMenu('miAbout', () => { location.href = '/sobre'; });
+
+// modo online: avisa que os projetos são temporários e públicos
+appConfig().then(cfg => { if (cfg && cfg.online) { const el = document.getElementById('onlineNotice'); if (el) el.hidden = false; } });
 
 loadList();

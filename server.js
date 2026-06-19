@@ -30,6 +30,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const isUuid = s => UUID_RE.test(s);
 const projFile = id => path.join(DATA, id + '.json');
 
+// Modo online/público (hospedagem pública): cada visitante recebe um cookie de
+// sessão; a lista de projetos passa a mostrar só os do dono do cookie, e
+// editar/excluir exige ser o dono. Visualizar por UUID continua aberto.
+const ONLINE = /^(1|true|yes|on)$/i.test(process.env.ONLINE_MODE || '');
+function getSid(req) {
+  const m = (req.headers.cookie || '').match(/(?:^|;\s*)cc_sid=([^;]+)/);
+  return m ? m[1] : null;
+}
+
 function send(res, status, body, headers = {}) {
   res.writeHead(status, { 'Cache-Control': 'no-cache', ...headers });
   res.end(body);
@@ -63,13 +72,14 @@ async function serveStatic(res, urlPath) {
   }
 }
 
-async function listProjects() {
+async function listProjects(sid) {
   const files = (await fsp.readdir(DATA)).filter(f => f.endsWith('.json'));
   const list = [];
   for (const f of files) {
     try {
       const j = JSON.parse(await fsp.readFile(path.join(DATA, f), 'utf8'));
       if (!j || !j.id) continue;   // ignora arquivos que não são projetos (ex.: prefs-*.json)
+      if (ONLINE && j.owner !== sid) continue;   // no modo online, só os do dono do cookie
       list.push({
         id: j.id, name: j.name,
         createdAt: j.createdAt, updatedAt: j.updatedAt,
@@ -102,9 +112,19 @@ const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://localhost');
     const p = u.pathname;
 
+    // sessão (modo online): garante um cookie de sessão por visitante
+    let sid = getSid(req);
+    if (ONLINE && !sid) {
+      sid = crypto.randomUUID();
+      res.setHeader('Set-Cookie', `cc_sid=${sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly`);
+    }
+
+    // ----- API: configuração do app (modo online?) -----
+    if (p === '/api/config') return sendJson(res, 200, { online: ONLINE });
+
     // ----- API: coleção -----
     if (p === '/api/projects') {
-      if (req.method === 'GET') return sendJson(res, 200, await listProjects());
+      if (req.method === 'GET') return sendJson(res, 200, await listProjects(sid));
       if (req.method === 'POST') {
         let payload = {};
         try { const b = await readBody(req); payload = b ? JSON.parse(b) : {}; } catch {}
@@ -112,6 +132,7 @@ const server = http.createServer(async (req, res) => {
         const now = new Date().toISOString();
         const proj = {
           id, name: (payload.name || 'Novo projeto').toString().slice(0, 200),
+          owner: ONLINE ? sid : null,
           createdAt: now, updatedAt: now, data: payload.data || null,
         };
         await fsp.writeFile(projFile(id), JSON.stringify(proj, null, 2));
@@ -157,6 +178,11 @@ const server = http.createServer(async (req, res) => {
         let proj;
         try { proj = JSON.parse(await fsp.readFile(file, 'utf8')); }
         catch { proj = { id, createdAt: new Date().toISOString() }; }
+        // modo online: só o dono edita (reivindica se ainda não tiver dono)
+        if (ONLINE) {
+          if (proj.owner && proj.owner !== sid) return sendJson(res, 403, { error: 'somente leitura' });
+          if (!proj.owner) proj.owner = sid;
+        }
         proj.id = id;
         if (payload.name != null) proj.name = payload.name.toString().slice(0, 200);
         if (payload.data !== undefined) proj.data = payload.data;
@@ -165,6 +191,9 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { id: proj.id, name: proj.name, updatedAt: proj.updatedAt });
       }
       if (req.method === 'DELETE') {
+        if (ONLINE) {
+          try { const j = JSON.parse(await fsp.readFile(file, 'utf8')); if (j.owner && j.owner !== sid) return sendJson(res, 403, { error: 'somente leitura' }); } catch {}
+        }
         try { await fsp.unlink(file); } catch {}
         return sendJson(res, 200, { ok: true });
       }
@@ -191,6 +220,7 @@ const server = http.createServer(async (req, res) => {
     // ----- Rotas de página -----
     if (req.method === 'GET' && /^\/p\/[^/]+$/.test(p)) return serveStatic(res, '/index.html');  // editor
     if (req.method === 'GET' && p === '/corte') return serveStatic(res, '/cutplan.html');        // plano de corte
+    if (req.method === 'GET' && p === '/sobre') return serveStatic(res, '/about.html');           // página Sobre
     if (req.method === 'GET' && (p === '/' || p === '/projects')) return serveStatic(res, '/projects.html');
     if (req.method === 'GET') return serveStatic(res, p);
 

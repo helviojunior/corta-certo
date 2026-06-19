@@ -3,3 +3,6 @@
 README.md
 docker-compose.yml
 data
+.env
+.env.example
+docs

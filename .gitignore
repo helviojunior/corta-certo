@@ -1,2 +1,5 @@
 # Projetos salvos pelo app (volume local)
 /data/
+
+# Variáveis de ambiente locais (use .env.example como modelo)
+.env
