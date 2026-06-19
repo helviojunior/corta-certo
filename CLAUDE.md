@@ -6,6 +6,9 @@
   `0.1 → 0.2 → … → 0.9 → 0.10 → 0.11 → … → 0.999`.
 - **Limite máximo: `0.999`** (999 commits). Não ultrapassar sem orientação do usuário.
 - Só é necessário editar `src/version.js`; o cabeçalho de todas as páginas (`.app-version`) é atualizado automaticamente.
+- **Exceção (sem bump):** commits que alteram **apenas** README, imagens (`docs/screenshots/**`) ou
+  memória/instruções (`CLAUDE.md`) **não** levam bump de versão. Se o commit tocar também em código
+  (`src/**`, `server.js`), o bump volta a ser obrigatório.
 
 ## Diálogos
 - Não usar `alert`/`confirm`/`prompt` nativos do navegador. Usar os diálogos customizados
