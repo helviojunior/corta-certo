@@ -1,5 +1,7 @@
 pipeline {
     agent {
+        // Em Manage Jenkins → System → Global properties → Environment variables, adicione
+        // PROD_AGENT_LABEL = "Agent label"
         label "${PROD_AGENT_LABEL}"
     }
     environment {
@@ -17,7 +19,7 @@ pipeline {
                         sudo mkdir -p ${DOCKER_FILES_PATH} || true
                         sudo rsync -av \
                             --exclude='.git/' \
-                            --exclude='.data/' \
+                            --exclude='data/' \
                             --exclude='*.log' \
                             "${WORKSPACE}/" "${DOCKER_FILES_PATH}"
                     """
@@ -30,7 +32,6 @@ pipeline {
                 script {
                     sh """
                         cd "${DOCKER_FILES_PATH}"
-                        sudo "ONLINE_MODE=1" > .env
                         sudo docker compose up -d --build
                     """
                 }

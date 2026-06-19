@@ -1,10 +1,11 @@
 services:
-  draw-wood:
+  corta-certo:
     build: .
-    image: draw-wood:latest
-    container_name: draw-wood
+    image: corta-certo:latest
+    container_name: corta-certo
     ports:
-      - "8080:80"
+      # porta publicada no host (configurável via .env). Padrão: 8080
+      - "${HOST_PORT:-8080}:80"
     volumes:
       - ./data:/app/data
     environment:

@@ -113,7 +113,13 @@ docker compose up -d --build  # aplicar atualizações do código
 ```
 
 ### Mudar a porta
-Edite `docker-compose.yml` (ex.: `"9000:80"`) e rode `docker compose up -d`.
+Defina `HOST_PORT` no `.env` (copie de `.env.example`) e rode `docker compose up -d`:
+
+```env
+HOST_PORT=9000
+```
+
+O padrão é `8080`.
 
 ### Modo online / público (`ONLINE_MODE`)
 Para hospedar uma instância pública/compartilhada, ative o **modo online** via variável
